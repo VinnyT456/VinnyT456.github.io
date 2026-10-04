@@ -10,6 +10,7 @@ import { Resend } from "resend";
  */
 
 export const runtime = "nodejs";
+export const dynamic = "force-static";
 
 const LIMITS = { name: 100, email: 254, message: 1000, body: 24 * 1024 };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
