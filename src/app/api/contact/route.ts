@@ -10,8 +10,6 @@ import { Resend } from "resend";
  */
 
 export const runtime = "nodejs";
-// never cache a POST handler; also keeps it request-time on every deploy target
-export const dynamic = "force-dynamic";
 
 const LIMITS = { name: 100, email: 254, message: 1000, body: 24 * 1024 };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
