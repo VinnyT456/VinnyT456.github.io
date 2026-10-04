@@ -74,12 +74,14 @@ export const site = {
   },
 
   // Intro loader: one caption per solving turn, oldest → newest, then the
-  // loader's own "Solved. / Your turn." beat. Five turns — keep it to five.
+  // loader's own "Solved. / Your turn." beat. Six turns — keep in sync with
+  // SCRAMBLE length in RubiksCube.tsx.
   milestones: [
-    { year: "2024", kind: "work" as const, label: "Taught a webcam to read a Rubik's cube", sub: "OpenCV + a ResNet for sticker colors" },
-    { year: "2024", kind: "work" as const, label: "15-112 at Carnegie Mellon", sub: "A Sudoku with 200 boards" },
     { year: "2025", kind: "role" as const, label: "Started CS at Northwestern", sub: "B.S. Computer Science" },
+    { year: "2025", kind: "role" as const, label: "Computer consulting aide", sub: "NU Student Affairs IT" },
     { year: "2025", kind: "role" as const, label: "Hackathon program intern", sub: "Grassroot Academy" },
     { year: "2026", kind: "role" as const, label: "Software engineering intern", sub: "Raiders Marketplace" },
+    { year: "2026", kind: "role" as const, label: "Researcher at Knight Lab", sub: "Look Again" },
+    { year: "2026", kind: "role" as const, label: "Software engineer", sub: "Northwestern Forge" },
   ],
 } as const;

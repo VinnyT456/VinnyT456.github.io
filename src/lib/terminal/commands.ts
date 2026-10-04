@@ -252,7 +252,7 @@ const whoami: Command = {
         text: "I build full-stack apps, machine-learning projects, and the occasional native tool, usually because I want to see if the idea actually works.",
       },
       { text: "" },
-      { text: "\nCurrently:" },
+      { text: "\n\nCurrently:" },
       { text: "  → studying computer science at Northwestern" },
       { text: "  → student researcher at Northwestern Knight Lab (Look Again)" },
       { text: "  → software engineer at Northwestern Forge" },

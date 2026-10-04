@@ -139,6 +139,13 @@ export default function ExperienceJourney() {
 
                     <p className="xp__note">{role.note}</p>
 
+                    {role.coursework?.length ? (
+                      <>
+                        <p className="xp__impact-label">Relevant coursework</p>
+                        <p className="xp__coursework font-mono">{role.coursework.join(" · ")}</p>
+                      </>
+                    ) : null}
+
                     {role.technologies.length > 0 ? (
                       <p className="xp__tech font-mono">
                         {role.technologies.join(" · ")}

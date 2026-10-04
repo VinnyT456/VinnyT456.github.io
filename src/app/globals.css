@@ -1908,6 +1908,13 @@ html.reduce-motion .term__output--reveal { animation: none; }
   left: 0;
   color: color-mix(in oklab, var(--foreground) 30%, transparent);
 }
+.xp__coursework {
+  margin-top: 0.5rem;
+  font-size: var(--text-xs);
+  color: color-mix(in oklab, var(--foreground) 76%, transparent);
+  line-height: 1.55;
+  max-width: 60ch;
+}
 .xp__tech {
   margin-top: 1.3rem;
   font-size: var(--text-xs);

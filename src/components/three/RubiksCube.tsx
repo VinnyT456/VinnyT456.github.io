@@ -36,6 +36,7 @@ const SCRAMBLE: Move[] = [
   { axis: "z", layer: -1, dir: 1 },
   { axis: "x", layer: -1, dir: 1 },
   { axis: "y", layer: -1, dir: -1 },
+  { axis: "z", layer: 1, dir: -1 },
 ];
 
 /** Solve = scramble reversed and inverted → returns the cube to solved. */

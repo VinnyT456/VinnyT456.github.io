@@ -7,6 +7,8 @@ export type ExperienceFloor = {
   note: string;
   highlights: readonly string[];
   technologies: readonly string[];
+  /** Relevant coursework — education floors only. */
+  coursework?: readonly string[];
   navLabel: string;
   isCurrent?: boolean;
   href?: string;
@@ -31,6 +33,13 @@ export const experienceFloors: ExperienceFloor[] = [
     note: "Pursuing a B.S. in Computer Science.",
     highlights: [],
     technologies: [],
+    coursework: [
+      "Linear Algebra",
+      "Software Design (C/C++)",
+      "Data Structures & Algorithms",
+      "Machine Learning",
+      "Software Quality Engineering",
+    ],
   },
   {
     id: "northwestern-forge",
