@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { exhibits } from "@/data/museum";
 import ProjectsPageClient from "./ProjectsPageClient";
 
@@ -8,5 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default function ProjectsPage() {
-  return <ProjectsPageClient />;
+  return (
+    <Suspense fallback={null}>
+      <ProjectsPageClient />
+    </Suspense>
+  );
 }
