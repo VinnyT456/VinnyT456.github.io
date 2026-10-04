@@ -156,40 +156,40 @@ export const exhibits: Exhibit[] = [
     theme: { accent: "#9acbb4", art: "signal", icon: "chart" },
     technical: {
       facts: [
-        { label: "Core", value: "Pure TypeScript sim — no React, DOM, or IO" },
+        { label: "Core", value: "Pure TypeScript sim: no React, DOM, or IO" },
         { label: "Search", value: "Bounded beam search over rotations" },
         { label: "Data", value: "Project Amber, cross-checked with Lunaris" },
         { label: "Tests", value: "Vitest · strict typecheck" },
       ],
       highlights: [
         "Models reactions, element auras, ICD, buffs, energy, and cooldowns on one event timeline.",
-        "The optimizer treats the simulator as a black box — combat rules live in exactly one place.",
+        "The optimizer treats the simulator as a black box, so combat rules live in exactly one place.",
         "Unverified data stays flagged; when sources conflict, it fails closed instead of guessing.",
-        "A coverage page separates sourced, executable, and regression-tested — no single flattering percentage.",
+        "A coverage page separates sourced, executable, and regression-tested. No single flattering percentage.",
       ],
     },
     demo: {
       enabled: true,
       flow: { input: "Team + rotation", model: "Deterministic sim", output: "Damage timeline" },
-      note: "Same inputs, same timeline, every time — so a rotation can be checked, compared A/B, and replayed.",
+      note: "Same inputs, same timeline, every time, so a rotation can be checked, compared A/B, and replayed.",
     },
     stations: stations({
       problem:
         "Rotation math lives in spreadsheets and half-remembered mechanics. It's hard to tell if a rotation even runs, let alone where its damage actually comes from.",
       approach:
-        "One reproducible simulation pipeline, honest about its own coverage — then let a search run on top of it.",
+        "One reproducible simulation pipeline, honest about its own coverage, with a search running on top of it.",
       build:
         "A layered TypeScript core: game data → reactions and buffs → combat engine → simulateRotation(). The optimizer and the Next.js dashboard only consume that API, never re-implement it. Character data is generated with per-level curves and provenance.",
     }),
   },
   {
     id: "This site",
-    title: site0?.title ?? "This Site",
+    title: site0?.title ?? "Personal Portfolio",
     year: site0?.year ?? "2026",
     category: "Web · Interactive 3D",
     description:
       site0?.description ??
-      "A dark, interactive portfolio — the page is the demo, not a screenshot of one.",
+      "A dark, interactive portfolio. The page is the demo, not a screenshot of one.",
     technologies: site0?.tags ?? ["Next.js", "Three.js", "WebGL"],
     href: site0?.href || undefined,
     exhibitType: "interactive_demo",
@@ -202,7 +202,7 @@ export const exhibits: Exhibit[] = [
         { label: "Styling", value: "CSS · SVG sticker system" },
       ],
       highlights: [
-        "The hero cube self-solves — no video, real geometry.",
+        "The hero cube self-solves: no video, real geometry.",
         "Museum walk is one scene: city → hall, no canvas swap.",
         "Reduced-motion path preserves every route and all content.",
       ],
@@ -210,15 +210,15 @@ export const exhibits: Exhibit[] = [
     demo: {
       enabled: true,
       flow: { input: "Scramble", model: "Solver", output: "Solved cube" },
-      note: "The cube on the pedestal is the live component — the same one that runs on the home page.",
+      note: "The cube on the pedestal is the live component, the same one that runs on the home page.",
     },
     stations: stations({
       problem:
-        "A CS portfolio should prove craft, not claim it — a card grid proves nothing.",
+        "A CS portfolio should prove craft, not claim it. A card grid proves nothing.",
       approach:
         "Make the site itself the demo: a self-solving 3D cube, a museum you walk, motion that rewards attention.",
       build:
-        "Next.js App Router, a custom Three.js particle + cube system, and a CSS/SVG sticker world. No page is a screenshot of the work — it is the work.",
+        "Next.js App Router, a custom Three.js particle + cube system, and a CSS/SVG sticker world. No page is a screenshot of the work; it is the work.",
     }),
   },
   {
@@ -234,7 +234,7 @@ export const exhibits: Exhibit[] = [
     theme: { accent: "#d8a7f2", art: "signal", icon: "chart" },
     technical: {
       highlights: [
-        "Screen in, keystrokes out — no injection, no memory reads, nothing hooked into the game.",
+        "Screen in, keystrokes out. No injection, no memory reads, nothing hooked into the game.",
         "A per-lane state machine: yellow notes tap, purple notes hold for the whole bar.",
         "Held notes turn white in the middle, so holds are judged from the bar's body instead.",
         "A calibration mode saves each lane's sample pixel, marked in red, for tuning.",
@@ -242,7 +242,7 @@ export const exhibits: Exhibit[] = [
     },
     stations: stations({
       problem:
-        "Six lanes, two note types, and frame-tight timing — the kind of task a program is better at than a thumb.",
+        "Six lanes, two note types, and frame-tight timing: the kind of task a program is better at than a thumb.",
       approach:
         "Treat it as a vision problem: sample one pixel per lane, classify its color, and drive the keys from that.",
       build:
@@ -255,7 +255,7 @@ export const exhibits: Exhibit[] = [
     year: "2026",
     category: "macOS · Native app",
     description:
-      "A native macOS HUD that plays Genshin's lyre from sheet music or MIDI — and a Learn mode that teaches you the song phrase by phrase.",
+      "A native macOS HUD that plays Genshin's lyre from sheet music or MIDI, plus a Learn mode that teaches you the song phrase by phrase.",
     technologies: ["Objective-C++", "C++", "AppKit", "CoreGraphics", "nlohmann/json", "Make"],
     href: "https://github.com/VinnyT456/genshin-lyre-autoplayer",
     exhibitType: "holographic_display",
@@ -270,7 +270,7 @@ export const exhibits: Exhibit[] = [
     },
     stations: stations({
       problem:
-        "The in-game lyre has 21 natural notes and no sheet-music support — every song is played by hand, key by key.",
+        "The in-game lyre has 21 natural notes and no sheet-music support, so every song is played by hand, key by key.",
       approach:
         "A floating player that docks to the game window, plays a playlist for you, or coaches you through it yourself.",
       build:
@@ -283,7 +283,7 @@ export const exhibits: Exhibit[] = [
     year: "2026",
     category: "Web · Full stack · AI",
     description:
-      "A live board of new-grad finance roles with a tracker built in — search it in plain English, save what fits, and move applications from saved to offer.",
+      "A live board of new-grad finance roles with a tracker built in. Search it in plain English, save what fits, and move applications from saved to offer.",
     technologies: ["React", "TypeScript", "Vite", "Supabase", "PostgreSQL", "Vercel"],
     href: "https://finance-job-dashboard.vercel.app",
     exhibitType: "holographic_display",
@@ -292,7 +292,7 @@ export const exhibits: Exhibit[] = [
       highlights: [
         "Roles sync from Jobright's GitHub feeds into Supabase, across eight finance tracks from IB to quant.",
         "\"Ask AI\": describe the role you want and it turns the request into board filters.",
-        "A pipeline tracker — saved, applied, interview, offer — with reminders and saved searches.",
+        "A pipeline tracker (saved, applied, interview, offer) with reminders and saved searches.",
         "A market snapshot of open roles, this week's postings, salary coverage, and remote share.",
       ],
     },
@@ -321,18 +321,18 @@ export const exhibits: Exhibit[] = [
         { label: "Sources", value: "Jobright + Simplify, internships and new grad" },
         { label: "Storage", value: "Supabase (Postgres)" },
         { label: "AI", value: "Gemini / Gemma" },
-        { label: "Deploy", value: "Render — bot + Dockerized PDF service" },
+        { label: "Deploy", value: "Render: bot + Dockerized PDF service" },
       ],
       highlights: [
         "Cross-aggregator dedup: one role posted under different URLs collapses to a single entry.",
         "Four-agent résumé pipeline: diagnose → match → rewrite → mock interview.",
-        "The rewriter leaves a literal [NUMBER?] where a metric belongs — it never invents your numbers.",
+        "The rewriter leaves a literal [NUMBER?] where a metric belongs. It never invents your numbers.",
         "A LeetCode roadmap renders 25 patterns as a node graph, with lessons, hints, and streaks.",
       ],
     },
     stations: stations({
       problem:
-        "Internship postings are scattered across aggregators, full of duplicates — and a posting is only half the job without a résumé that matches it.",
+        "Internship postings are scattered across aggregators, full of duplicates, and a posting is only half the job without a résumé that matches it.",
       approach:
         "Put the whole pipeline in the Discord server people already use: find the role, fit the résumé, prep the interview.",
       build:
@@ -345,7 +345,7 @@ export const exhibits: Exhibit[] = [
     year: "2026",
     category: "Java · Software quality",
     description:
-      "The Exploding Kittens card game in Java, built by a team of four for Northwestern's CS 380 — test-driven, behavior-specified, and mutation-tested.",
+      "The Exploding Kittens card game in Java, built by a team of four for Northwestern's CS 380: test-driven, behavior-specified, and mutation-tested.",
     technologies: ["Java", "JavaFX", "Gradle", "JUnit 5", "Cucumber", "PIT", "JaCoCo", "SpotBugs"],
     href: "https://github.com/VinnyT456/Exploding-Kittens",
     exhibitType: "holographic_display",
@@ -363,20 +363,20 @@ export const exhibits: Exhibit[] = [
         { label: "CI", value: "Gradle build in GitHub Actions" },
       ],
       highlights: [
-        "Nope is modeled as undo, dispatched by card type — Skip, Reverse, and Attack each roll back differently.",
+        "Nope is modeled as undo, dispatched by card type: Skip, Reverse, and Attack each roll back differently.",
         "See the Future can't be un-seen, so a Nope reshuffles the deck instead.",
         "Game logic is mutation-tested; the one surviving mutant is documented as provably equivalent.",
       ],
     },
     stations: stations({
       problem:
-        "A card game full of cards that cancel, copy, and redirect other cards — the edge cases are the whole game.",
+        "A card game full of cards that cancel, copy, and redirect other cards. The edge cases are the whole game.",
       approach:
         "Pin the rules down in tests first, then make every ambiguous card a written design decision.",
       build:
         "Java with a JavaFX UI, specified in Cucumber scenarios and covered by JUnit 5. PIT mutation testing, JaCoCo, SpotBugs, and Checkstyle run in the Gradle build.",
       results:
-        "The game-logic classes are mutation-tested. The one mutant that lives (< vs <= in forced turns) can't be killed — both return the same value — and the README explains why.",
+        "The game-logic classes are mutation-tested. The one mutant that lives (< vs <= in forced turns) can't be killed (both return the same value), and the README explains why.",
     }),
   },
   {
@@ -394,7 +394,7 @@ export const exhibits: Exhibit[] = [
       highlights: [
         "Two guides: Penny opens every door in order, Blaze follows warm/cold clues.",
         "A linear-vs-binary replay shows how many doors each strategy would have needed.",
-        "Maker Mode: design a maze — doors, clues, move limit — and share it with a room code.",
+        "Maker Mode: design a maze (doors, clues, move limit) and share it with a room code.",
         "A strategy journal asks players to explain what they tried, plus a campaign rank board.",
       ],
     },
@@ -426,7 +426,7 @@ export const exhibits: Exhibit[] = [
       ],
       facts: [
         { label: "Model", value: "ResNet-18, from scratch, 1-channel" },
-        { label: "Dataset", value: "ChestMNIST — 28×28, 14 labels" },
+        { label: "Dataset", value: "ChestMNIST: 28×28, 14 labels" },
         { label: "Training", value: "AdamW + OneCycleLR" },
         { label: "Selection", value: "Best mean ROC-AUC on validation" },
       ],
@@ -439,7 +439,7 @@ export const exhibits: Exhibit[] = [
     demo: {
       enabled: true,
       flow: { input: "Chest X-ray", model: "ResNet-18", output: "14 labels" },
-      note: "A learning project and research prototype — not clinical or diagnostic software.",
+      note: "A learning project and research prototype, not clinical or diagnostic software.",
     },
     stations: stations({
       problem:
@@ -458,7 +458,7 @@ export const exhibits: Exhibit[] = [
     year: "2026",
     category: "Web · AI · Hackathon",
     description:
-      "\"Map your multiverse\" — a WildHacks 2026 app that simulates how one life decision could play out, side by side with the path you're already on.",
+      "\"Map your multiverse\": a WildHacks 2026 app that simulates how one life decision could play out, side by side with the path you're already on.",
     technologies: ["React", "Vite", "Tailwind CSS", "React Router", "Express", "Gemini"],
     href: "https://paralytica.tech/",
     exhibitType: "holographic_display",
@@ -503,7 +503,7 @@ export const exhibits: Exhibit[] = [
         { label: "Map", value: "Leaflet" },
       ],
       highlights: [
-        "Plain-language symptoms in, relevant specialties out — no medical jargon required.",
+        "Plain-language symptoms in, relevant specialties out. No medical jargon required.",
         "Top three matches ranked by relevance, with quality rating, distance, and accepted insurance.",
         "Uses your location for distance, and links straight to directions.",
       ],
@@ -512,9 +512,9 @@ export const exhibits: Exhibit[] = [
       problem:
         "Finding the right provider usually starts with a search engine and a lot of guessing about which specialty you even need.",
       approach:
-        "Start from what's wrong and what you need, then match against real healthcare data — on a map, near you.",
+        "Start from what's wrong and what you need, then match against real healthcare data, on a map, near you.",
       build:
-        "A short intake — symptoms, age, insurance, location — goes to a language model that maps it to specialties, then to CMS provider data and Chicago Health Atlas indicators. React and TypeScript on Vite, with Leaflet for the map.",
+        "A short intake (symptoms, age, insurance, location) goes to a language model that maps it to specialties, then to CMS provider data and Chicago Health Atlas indicators. React and TypeScript on Vite, with Leaflet for the map.",
     }),
   },
   {
@@ -523,7 +523,7 @@ export const exhibits: Exhibit[] = [
     year: "2025",
     category: "Desktop · Data viz",
     description:
-      "A PyQt6 desktop app that turns a CSV into a live plot and the Seaborn/Matplotlib code that draws it — so the chart you tweak is the chart you can reproduce.",
+      "A PyQt6 desktop app that turns a CSV into a live plot and the Seaborn/Matplotlib code that draws it, so the chart you tweak is the chart you can reproduce.",
     technologies: ["Python", "PyQt6", "pandas", "NumPy", "Seaborn", "Matplotlib", "TinyDB"],
     href: "https://github.com/VinnyT456/SmartGraph-Builder",
     exhibitType: "holographic_display",
@@ -550,7 +550,7 @@ export const exhibits: Exhibit[] = [
     year: "2025",
     category: "ML · NLP",
     description:
-      "A Streamlit app for CS 250 that spots spam in YouTube comments — and lets you train your own model, then see why it decides what it does.",
+      "A Streamlit app for CS 250 that spots spam in YouTube comments and lets you train your own model, then see why it decides what it does.",
     technologies: ["Python", "Streamlit", "scikit-learn", "NLTK", "SymSpell", "pandas", "NumPy", "Plotly"],
     href: "https://github.com/VinnyT456/CommentGuard",
     exhibitType: "holographic_display",
@@ -568,7 +568,7 @@ export const exhibits: Exhibit[] = [
       approach:
         "Make the classifier something you can poke at: predict, retrain on your own data, and visualize the results.",
       build:
-        "A multi-page Streamlit app. Text is cleaned up — spelling correction with SymSpell, contractions expanded, emoji normalized — then vectorized for a scikit-learn classifier. Trained models are saved with joblib and explored through Plotly charts and word clouds.",
+        "A multi-page Streamlit app. Text is cleaned up (spelling correction with SymSpell, contractions expanded, emoji normalized), then vectorized for a scikit-learn classifier. Trained models are saved with joblib and explored through Plotly charts and word clouds.",
     }),
   },
   {
@@ -577,7 +577,7 @@ export const exhibits: Exhibit[] = [
     year: "2025",
     category: "Reinforcement learning",
     description:
-      "Three Deep Q-learning agents in PyTorch and Gymnasium — CartPole, MountainCar, and Blackjack — each with its own reward shaping and replay-buffer experiments.",
+      "Three Deep Q-learning agents in PyTorch and Gymnasium (CartPole, MountainCar, and Blackjack), each with its own reward shaping and replay-buffer experiments.",
     technologies: ["Python", "PyTorch", "Gymnasium", "Double DQN", "PER", "NumPy", "Matplotlib"],
     href: "https://github.com/VinnyT456/mountain-car-rl-agent",
     exhibitType: "holographic_display",
@@ -596,7 +596,7 @@ export const exhibits: Exhibit[] = [
     },
     stations: stations({
       problem:
-        "Classic control tasks look easy until the reward is sparse — MountainCar gives −1 per step until you happen to reach the flag.",
+        "Classic control tasks look easy until the reward is sparse. MountainCar gives −1 per step until you happen to reach the flag.",
       approach:
         "Same small network shape across three environments; change the reward shaping and the replay memory, and measure what actually helps.",
       build:
@@ -611,7 +611,7 @@ export const exhibits: Exhibit[] = [
     year: "2024",
     category: "Python · Game",
     description:
-      "A full Sudoku game for Carnegie Mellon's 15-112 term project — 200 boards from easy to evil, legal-move tracking, and hints when you're stuck.",
+      "A full Sudoku game for Carnegie Mellon's 15-112 term project: 200 boards from easy to evil, legal-move tracking, and hints when you're stuck.",
     technologies: ["Python", "cmu_graphics", "Pillow"],
     href: "https://github.com/VinnyT456/15-112-Sudoku",
     exhibitType: "physical_artifact",
@@ -625,7 +625,7 @@ export const exhibits: Exhibit[] = [
     },
     stations: stations({
       problem:
-        "Hard Sudoku is mostly bookkeeping — tracking which numbers can still go where.",
+        "Hard Sudoku is mostly bookkeeping: tracking which numbers can still go where.",
       approach:
         "A Sudoku that helps without spoiling it: track your own candidates, or let the game track the legal moves for you.",
       build:
@@ -652,7 +652,7 @@ export const exhibits: Exhibit[] = [
     },
     stations: stations({
       problem:
-        "Solving a physical cube in software starts with reading its state correctly — and lighting makes colors lie.",
+        "Solving a physical cube in software starts with reading its state correctly, and lighting makes colors lie.",
       approach:
         "Let a model read the stickers, let a human confirm each face, then solve it in stages you can follow.",
       build:
@@ -688,13 +688,13 @@ export const exhibits: Exhibit[] = [
     },
     stations: stations({
       problem:
-        "The official question bank is a web app you click through one filter at a time — no way to drill a single skill offline, shuffled, at your own pace.",
+        "The official question bank is a web app you click through one filter at a time, with no way to drill a single skill offline, shuffled, at your own pace.",
       approach:
         "Pull the whole bank down once, turn every page into clean data, and build the practice tool on top of that.",
       build:
         "A Selenium crawler walks the College Board question bank by skill and difficulty and exports each set as a PDF. A parser OCRs the pages with Tesseract and pdfplumber and writes structured JSON. A small terminal quiz shuffles the set and shows the explanation after every answer.",
       results:
-        "737 Reading and Writing questions across seven skills — from Boundaries to Transitions — parsed into JSON, ready to drill.",
+        "737 Reading and Writing questions across seven skills (Boundaries to Transitions), parsed into JSON, ready to drill.",
     }),
   },
 ];

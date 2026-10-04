@@ -18,7 +18,15 @@ import MagneticButton from "./MagneticButton";
 
 // The hero cube (three.js) loads as its own chunk so the name, copy and CTAs
 // hydrate first. .cube-stage has a fixed height, so nothing shifts when it lands.
-const ParticleCube = dynamic(() => import("./three/ParticleCube"), { ssr: false });
+// while the 3D loads, a faint cube outline holds the stage (never an empty void)
+const ParticleCube = dynamic(() => import("./three/ParticleCube"), {
+  ssr: false,
+  loading: () => (
+    <div className="cube-loading" aria-hidden>
+      <span className="cube-loading__face" />
+    </div>
+  ),
+});
 
 // Deadpan reactions the HUD fires back at the visitor. Pools, so the same
 // gesture never gives the same line twice in a row.
@@ -32,16 +40,16 @@ const QUIPS: Record<"drag" | "fastspin" | "scramble" | "solved", string[]> = {
 const IDLE_NUDGE_MS = 6500;
 // Touch and mouse get their own verbs — phones never see "click".
 const NUDGE = {
-  fine: "psst — double-click me",
-  coarse: "psst — double-tap me",
-  keys: "psst — arrows spin me",
+  fine: "psst, double-click me",
+  coarse: "psst, double-tap me",
+  keys: "psst, arrows spin me",
 };
 
 function CubeUnavailable() {
   return (
     <div className="flex h-full items-center justify-center px-6 text-center">
       <p className="max-w-xs text-sm text-muted">
-        Cannot draw the cube. This page needs WebGL — open Chrome, Firefox, or
+        Cannot draw the cube. This page needs WebGL. Open Chrome, Firefox, or
         Safari.
       </p>
     </div>
@@ -189,15 +197,17 @@ export default function Hero() {
                   <span className="cube-hint cube-hint--keys">{NUDGE.keys}</span>
                 </span>
               ) : routeLabel ? (
+                // what the cube's front face opens, worded for how you're driving it
                 <span className="text-foreground/90">
-                  <span className="text-accent">open</span> {routeLabel}
-                  <span className="cube-hint cube-hint--keys text-muted"> · arrows to spin</span>
+                  <span className="cube-hint cube-hint--fine"><span className="text-accent">click</span> → {routeLabel}</span>
+                  <span className="cube-hint cube-hint--coarse"><span className="text-accent">tap</span> → {routeLabel}</span>
+                  <span className="cube-hint cube-hint--keys"><span className="text-accent">enter</span> → {routeLabel}</span>
                 </span>
               ) : (
                 // one instruction line, worded for how you're driving it
                 <span className="text-muted">
-                  <span className="cube-hint cube-hint--fine">each face is a page · click to pick</span>
-                  <span className="cube-hint cube-hint--coarse">tap a face to pick it</span>
+                  <span className="cube-hint cube-hint--fine">each face is a page · click to open</span>
+                  <span className="cube-hint cube-hint--coarse">tap a face to open it</span>
                   <span className="cube-hint cube-hint--keys">arrows to spin · enter to open</span>
                 </span>
               )}

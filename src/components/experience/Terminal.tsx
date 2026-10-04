@@ -272,7 +272,7 @@ export default function Terminal() {
       stickBottom.current = true;
       const hint = idleNudges.current === 1
         ? "(still poking around? try `projects` or `timeline`)"
-        : "(psst — `secret` is a real command)";
+        : "(psst: `secret` is a real command)";
       setEntries((prev) => [
         ...prev,
         { id: nextId(), cwd: "~", input: "", output: [{ text: hint, tone: "muted" }] },
@@ -609,7 +609,6 @@ export default function Terminal() {
 
   return (
     <main id="main" className="term-page page-stage flex-1">
-      <h1 className="sr-only">About Vincent</h1>
       <section
         className="term"
         aria-label="Interactive shell — Vincent's experience"
@@ -625,6 +624,8 @@ export default function Terminal() {
           <span className="term__title">
             {USER}@{HOST}: {cwdDisplay}
           </span>
+          {/* the page's visible name, at the bar's far end */}
+          <h1 className="term__heading">About Vincent</h1>
         </header>
 
         <div className="term__scroll" ref={scrollRef} onScroll={onScroll}>

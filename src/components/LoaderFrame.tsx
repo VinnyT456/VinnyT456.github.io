@@ -91,7 +91,7 @@ export default function LoaderFrame({
           ~66% down, so a fixed top% landed the text on it. */}
       <div
         aria-hidden
-        className={`pointer-events-none absolute inset-x-0 bottom-[max(6.75rem,calc(env(safe-area-inset-bottom)+5.75rem))] flex flex-col items-center px-6 text-center transition-opacity duration-300 ${
+        className={`pointer-events-none absolute inset-x-0 bottom-[max(7.75rem,calc(env(safe-area-inset-bottom)+6.5rem))] flex flex-col items-center px-6 text-center transition-opacity duration-300 ${
           bursting ? "opacity-0" : "opacity-100"
         }`}
       >
@@ -124,7 +124,7 @@ export default function LoaderFrame({
       {dotCount > 0 ? (
         <div
           aria-hidden
-          className={`absolute bottom-[max(3.5rem,calc(env(safe-area-inset-bottom)+2.5rem))] left-1/2 flex -translate-x-1/2 items-center gap-2 transition-opacity duration-300 ${
+          className={`absolute bottom-[max(5rem,calc(env(safe-area-inset-bottom)+3.75rem))] left-1/2 flex -translate-x-1/2 items-center gap-2 transition-opacity duration-300 ${
             bursting ? "opacity-0" : "opacity-100"
           }`}
         >

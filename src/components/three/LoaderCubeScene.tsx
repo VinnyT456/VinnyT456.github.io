@@ -26,7 +26,9 @@ export default function LoaderCubeScene({
 }) {
   return (
     <Canvas
-      className="!absolute inset-0"
+      // .loader-cube-canvas: on very short screens the canvas stops above the
+      // caption stack, so the cube draws smaller and higher instead of under it
+      className="loader-cube-canvas !absolute inset-0"
       aria-hidden
       camera={{ position: [3.5, 1.5, 7.8], fov: 42 }}
       dpr={[1, 1.5]}

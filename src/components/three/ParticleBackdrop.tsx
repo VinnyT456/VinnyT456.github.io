@@ -293,12 +293,19 @@ export default function ParticleBackdrop() {
     const starCount = desktop ? 1500 : tablet ? 1000 : 550;
     const moteCount = desktop ? 14 : tablet ? 8 : 0;
 
-    const renderer = new THREE.WebGLRenderer({
-      canvas,
-      alpha: true,
-      antialias: false,
-      powerPreference: "low-power",
-    });
+    // No WebGL (blocked, disabled, or a lost driver): the sky is decoration,
+    // so skip it quietly instead of letting the throw take the page down.
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        canvas,
+        alpha: true,
+        antialias: false,
+        powerPreference: "low-power",
+      });
+    } catch {
+      return;
+    }
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO));
     renderer.outputColorSpace = THREE.SRGBColorSpace;

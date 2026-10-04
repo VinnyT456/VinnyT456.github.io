@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Component, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import dynamic from "next/dynamic";
 import TransitionLink from "@/components/transitions/TransitionLink";
+import { Icon } from "@/components/icons";
+import { exhibits, exhibitSlug } from "@/data/museum";
 import { useReducedMotion } from "@/lib/media";
 import {
   skills,
@@ -11,20 +14,94 @@ import {
   type SkillLevel,
 } from "@/data/skills";
 import { invertedIcons, liftedIcons, skillGlyphs, skillIcons } from "./skillIcons";
+import SkillsWheel from "./SkillsWheel";
+
+// The WebGL orrery loads only when the map is shown (no 3D in first load).
+const SkillsWheelGL = dynamic(() => import("./SkillsWheelGL"), {
+  ssr: false,
+  // a faint ring silhouette holds the slot while the 3D loads
+  loading: () => (
+    <div className="sk-wheel sk-wheel--gl" aria-hidden>
+      <div className="sk-wheel__stage">
+        <span className="sk-wheel__ghost" />
+        <span className="sk-wheel__loading">Setting the wheel turning…</span>
+      </div>
+    </div>
+  ),
+});
+
+let webglCache: boolean | null = null;
+function hasWebGL() {
+  if (webglCache === null) {
+    try {
+      const c = document.createElement("canvas");
+      webglCache = Boolean(c.getContext("webgl2") || c.getContext("webgl"));
+    } catch {
+      webglCache = false;
+    }
+  }
+  return webglCache;
+}
+const noSubscribe = () => () => {};
+
+/** If the 3D wheel throws (driver, context loss), show the SVG wheel instead. */
+class WheelBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
 
 /**
- * The Skills page — a ledger, not a wall of logo tiles.
+ * The Skills page — an orrery and a ledger, never a wall of logo tiles.
  *
  * Tools are grouped by how much they've actually been used (daily drivers →
- * shipped with → learned in class → tinkering), each row carrying its real
- * project count and an "in use" tag in words. Picking a row opens the detail
- * panel: what it's for and — pulled live from the museum — the projects built
- * with it, each linking straight to its room.
+ * regulars → used once or twice → learned in class → tinkering). Wide screens
+ * open on the map: the WebGL orrery, one orbit per tier, with details floating
+ * in once a tool is picked (the disc slides out from under them). The list is
+ * the same tiers as rows with real project counts. Phones get a still wheel
+ * above the list, and details open under the tapped row. Every detail lists —
+ * pulled live from the museum — the projects built with it, each linking
+ * straight to its room.
  *
  * Data-driven end to end: groups, counts and project lists derive from
  * `skills.ts` + `museum.ts`. Motion is CSS entrance + hover only; reduced
  * motion strips it and keeps every interaction working.
  */
+
+type View = "map" | "list";
+
+/** ?tool=<id> — only a real tool id counts */
+function readUrlTool(): string | null {
+  const id = new URLSearchParams(window.location.search).get("tool");
+  return id && skillById(id) ? id : null;
+}
+const VIEW_KEY = "skills-view";
+function readStoredView(): View | null {
+  try {
+    const v = localStorage.getItem(VIEW_KEY);
+    return v === "map" || v === "list" ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Below this width details open inline under a tapped row (no side panel). */
+const INLINE_QUERY = "(max-width: 959px)";
+function useInlineDetails() {
+  return useSyncExternalStore(
+    (onChange) => {
+      const mq = window.matchMedia(INLINE_QUERY);
+      mq.addEventListener("change", onChange);
+      return () => mq.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia(INLINE_QUERY).matches,
+    () => false
+  );
+}
 
 /** How many museum projects use a tool (∞-ish for tools in every project). */
 const PROJECT_COUNT = new Map(skills.map((s) => [s.id, projectsForSkill(s).length]));
@@ -59,6 +136,12 @@ const TIER_LABEL: Record<Tier, string> = {
   exploring: "Tinkering",
 };
 
+/** The wheel's orbits: the same tiers as the ledger, innermost = most used
+ *  (empty tiers left out). */
+const WHEEL_ORBITS: Skill[][] = GROUPS.map((g) =>
+  skills.filter((s) => tierOf(s) === g.tier).sort(byWeight)
+).filter((tools) => tools.length > 0);
+
 /** Narrow screens list this many projects before a "show all" toggle. */
 const INLINE_PROJECTS = 3;
 
@@ -87,15 +170,61 @@ function matches(s: Skill, q: string) {
 
 export default function SkillsWorkshop() {
   const reduced = useReducedMotion();
-  const [selectedId, setSelectedId] = useState<string>(skills[0]?.id ?? "");
+  // The picked tool lives in the URL (?tool=react), so a tool's details can be
+  // linked to. The link opens it on arrival; picks and closes keep it current.
+  // Narrow screens open details inline only after a tap — the default
+  // selection shouldn't push the toolkit off screen on first load.
+  const urlTool = useSyncExternalStore(noSubscribe, readUrlTool, () => null);
+  const [choice, setChoice] = useState<{ id: string; picked: boolean } | null>(null);
+  const selectedId = choice?.id ?? urlTool ?? skills[0]?.id ?? "";
+  const picked = choice ? choice.picked : urlTool !== null;
+  const setSelectedId = (id: string) =>
+    setChoice((c) => ({ id, picked: c ? c.picked : urlTool !== null }));
+  const setPicked = (on: boolean) =>
+    setChoice((c) => ({ id: c?.id ?? urlTool ?? skills[0]?.id ?? "", picked: on }));
+  useEffect(() => {
+    // only after the visitor picks or closes — never on arrival, so the link
+    // they came in on survives hydration
+    if (!choice) return;
+    const url = new URL(window.location.href);
+    const want = picked ? selectedId : null;
+    if (url.searchParams.get("tool") === want) return;
+    if (want) url.searchParams.set("tool", want);
+    else url.searchParams.delete("tool");
+    window.history.replaceState(window.history.state, "", url);
+  }, [choice, picked, selectedId]);
   const [query, setQuery] = useState("");
-  // Narrow screens open details inline only after a tap — the default selection
-  // shouldn't push the toolkit off screen on first load.
-  const [picked, setPicked] = useState(false);
+  // Map | List. null = the default (map on wide screens, list below 960px —
+  // decided in CSS so there's no flash); a click pins the visitor's choice.
+  // The visitor's pick is remembered (per browser) for their next visit.
+  const storedView = useSyncExternalStore(noSubscribe, readStoredView, () => null);
+  const [chosenView, setChosenView] = useState<View | null>(null);
+  const view = chosenView ?? storedView;
+  const setView = (v: View) => {
+    setChosenView(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      /* private mode / blocked storage: the choice just isn't remembered */
+    }
+  };
+  // the visitor's pause for the orbits (WCAG 2.2.2)
+  const [paused, setPaused] = useState(false);
+  // the 3D wheel stood up face-on (the atom view)
+  const [flat, setFlat] = useState(false);
+  // On narrow screens the preselected tool has no visible details until a tap,
+  // so it shouldn't look (or announce as) selected before then.
+  const inline = useInlineDetails();
 
   const selected = skillById(selectedId) ?? skills[0];
   const projects = useMemo(
-    () => (selected ? projectsForSkill(selected) : []),
+    () =>
+      !selected
+        ? []
+        : selected.everyProject
+          ? // a tool used on every project (Git): list them all
+            exhibits.map((e) => ({ id: e.id, slug: exhibitSlug(e), title: e.title, category: e.category }))
+          : projectsForSkill(selected),
     [selected]
   );
 
@@ -107,12 +236,29 @@ export default function SkillsWorkshop() {
     setPicked(true);
     if (typeof window !== "undefined" && window.innerWidth < 960) {
       requestAnimationFrame(() =>
-        inlineRef.current?.scrollIntoView({
+        // the tapped row lands at the top, its details right under it
+        (inlineRef.current?.parentElement ?? inlineRef.current)?.scrollIntoView({
           behavior: reduced ? "auto" : "smooth",
-          block: "nearest",
+          block: "start",
         })
       );
     }
+  };
+
+  // the intro's "ranked in the list": the list view on wide screens, the
+  // ledger itself (below the wheel) on phones
+  const showList = () => {
+    if (!inline) setView("list");
+    requestAnimationFrame(() =>
+      document.querySelector(".sk__ledger")?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" })
+    );
+  };
+
+  // phones: from a tool's details back up to the wheel, onto the tool it came from
+  const backToMap = () => {
+    const wheel = document.querySelector(".sk-wheel--compact");
+    wheel?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
+    wheel?.querySelector<HTMLButtonElement>(`[data-skill="${selectedId}"]`)?.focus({ preventScroll: true });
   };
 
   // Search / "grab a tool": matches stay lit, the rest dim. `/` focuses it.
@@ -155,6 +301,76 @@ export default function SkillsWorkshop() {
     };
   }, [selectedId]);
 
+  const webgl = useSyncExternalStore(noSubscribe, hasWebGL, () => false);
+  const mapView = !inline && view !== "list";
+
+  // map mode: details float over the wheel. A keyboard pick moves focus into
+  // them; closing hands focus back to the medallion it came from.
+  const closeDetails = () => {
+    const back = document.activeElement?.closest(".sk__detail");
+    setPicked(false);
+    if (back) {
+      document
+        .querySelector<HTMLButtonElement>(`.sk-wheel__medals [data-skill="${selectedId}"]`)
+        ?.focus();
+    }
+  };
+  useEffect(() => {
+    if (!picked || !mapView) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.target instanceof HTMLInputElement) return;
+      const back = document.activeElement?.closest(".sk__detail");
+      setChoice({ id: selectedId, picked: false });
+      if (back) {
+        document
+          .querySelector<HTMLButtonElement>(`.sk-wheel__medals [data-skill="${selectedId}"]`)
+          ?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [picked, mapView, selectedId]);
+
+  // Esc lays a stood-up wheel back down (when no details are open)
+  useEffect(() => {
+    if (!flat || picked || !mapView) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !(e.target instanceof HTMLInputElement)) setFlat(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [flat, picked, mapView]);
+
+  const wheelProps = {
+    orbits: WHEEL_ORBITS,
+    selectedId: selected?.id ?? null,
+    picked,
+    matchIds,
+    paused,
+    active: view !== "list",
+    flat,
+    onFlatChange: setFlat,
+    onSelect: (id: string, viaKeyboard: boolean) => {
+      if (inline) return selectSkill(id);
+      setSelectedId(id);
+      setPicked(true);
+      if (viaKeyboard) requestAnimationFrame(() => detailRef.current?.focus());
+    },
+    onDismiss: () => {
+      if (picked) setPicked(false);
+    },
+    renderIcon: (s: Skill, px: number) => (
+      <span
+        className="sk__row-icon"
+        data-invert={invertedIcons.has(s.id) ? "" : undefined}
+        data-lift={liftedIcons.has(s.id) ? "" : undefined}
+      >
+        {/* full glyph (e.g. "OCR"), not a bare initial: medallions have the room */}
+        <ToolGlyph skill={s} size={Math.round((px * (ROW_ICON[s.id] ?? 20)) / 20)} />
+      </span>
+    ),
+  };
+
   const searchRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -176,12 +392,25 @@ export default function SkillsWorkshop() {
       id="main"
       className={`sk page-stage flex-1${reduced ? " sk--static" : ""}`}
     >
-      <div className="sk__inner page-x mx-auto w-full max-w-6xl">
+      <div className="sk__inner page-x mx-auto w-full max-w-5xl">
         <header className="sk__intro">
           <h1 className="sk__title">The tools I use to build things.</h1>
           <p className="sk__lead">
             The languages, frameworks, and tools behind my projects. Pick one to
             see what I&apos;ve built with it.
+            <span className="sk__lead-map"> Closer to the centre, the more I use it.</span>
+          </p>
+          {/* the stack in words, for a ten-second scan — straight from the data */}
+          <p className="sk__stack">
+            <span className="sk__stack-label">Daily drivers:</span>{" "}
+            <span translate="no">{WHEEL_ORBITS[0].map((s) => s.name).join(" · ")}</span>
+            <span className="sk__stack-more">
+              {", "}plus {skills.length - WHEEL_ORBITS[0].length} more,{" "}
+              <button type="button" className="sk__stack-link" onClick={showList}>
+                ranked in the list
+              </button>
+              .
+            </span>
           </p>
         </header>
 
@@ -196,6 +425,10 @@ export default function SkillsWorkshop() {
                 <input
                   ref={searchRef}
                   type="search"
+                  name="tool"
+                  autoComplete="off"
+                  spellCheck={false}
+                  enterKeyHint="search"
                   className="sk__search-input font-mono"
                   placeholder="find a tool…"
                   value={query}
@@ -211,11 +444,12 @@ export default function SkillsWorkshop() {
                 />
                 {q ? (
                   <span className="sk__search-count font-mono" aria-live="polite">
-                    {matchIds?.size ?? 0}
+                    {matchIds?.size ?? 0} {matchIds?.size === 1 ? "tool" : "tools"}
                   </span>
                 ) : null}
               </label>
 
+              {/* the key for the green dot, right beside the search */}
               <p className="sk__legend">
                 <span className="sk__live-dot" aria-hidden />
                 in use now
@@ -225,11 +459,56 @@ export default function SkillsWorkshop() {
               <p className="sk__keys font-mono" aria-hidden>
                 <kbd>/</kbd> search
                 <span className="sk__keys-sep">·</span>
-                <kbd>↑</kbd>
-                <kbd>↓</kbd> browse
+                <kbd>arrows</kbd> browse
               </p>
+
+              {/* view tools, grouped to the right — wide screens only */}
+              <div className="sk__view-tools">
+              <div className="sk__views-toggle" role="group" aria-label="View">
+                <button
+                  type="button"
+                  className="sk__view-btn"
+                  aria-pressed={view !== "list"}
+                  onClick={() => setView("map")}
+                >
+                  Map
+                </button>
+                <button
+                  type="button"
+                  className="sk__view-btn"
+                  aria-pressed={view === "list"}
+                  onClick={() => setView("list")}
+                >
+                  List
+                </button>
+              </div>
+
+              {/* map only: hold the orbits still */}
+              {!reduced ? (
+                <button
+                  type="button"
+                  className="sk__orbit-btn"
+                  aria-pressed={paused}
+                  aria-label="Pause orbits"
+                  title={paused ? "Resume orbits" : "Pause orbits"}
+                  onClick={() => setPaused((p) => !p)}
+                >
+                  <Icon name={paused ? "play" : "pause"} size={16} />
+                </button>
+              ) : null}
+              </div>
             </div>
 
+            <div className="sk__views" data-view={view ?? undefined}>
+            {inline ? (
+              <SkillsWheel {...wheelProps} compact />
+            ) : view === "list" ? null /* no 3D loads for a list visitor */ : webgl ? (
+              <WheelBoundary fallback={<SkillsWheel {...wheelProps} />}>
+                <SkillsWheelGL {...wheelProps} />
+              </WheelBoundary>
+            ) : (
+              <SkillsWheel {...wheelProps} />
+            )}
             <div className="sk__ledger">
               {visibleGroups.map((g) => (
                 <section key={g.tier} className="sk__group" aria-labelledby={`sk-${g.tier}`}>
@@ -245,13 +524,18 @@ export default function SkillsWorkshop() {
                       <li key={s.id}>
                         <ToolRow
                           skill={s}
-                          selected={s.id === selectedId}
+                          selected={s.id === selectedId && picked}
                           onSelect={() => selectSkill(s.id)}
                         />
                         {/* narrow screens: details open right under the picked row */}
                         {picked && selected?.id === s.id ? (
                           <div className="sk__inline-detail" ref={inlineRef} aria-live="polite">
                             <SkillDetail skill={selected} projects={projects} capped />
+                            {/* phones: the tap came from the wheel up top — a way back to it */}
+                            <button type="button" className="sk__back-map" onClick={backToMap}>
+                              <Icon name="arrowUpToLine" size={16} />
+                              Back to the wheel
+                            </button>
                           </div>
                         ) : null}
                       </li>
@@ -260,19 +544,49 @@ export default function SkillsWorkshop() {
                 </section>
               ))}
               {visibleGroups.length === 0 ? (
-                <p className="sk__none font-mono">
-                  Nothing on the bench matches “{query.trim()}”.{" "}
-                  <button type="button" className="sk__none-clear" onClick={() => setQuery("")}>
-                    Clear search
-                  </button>
-                </p>
+                <div className="sk__none">
+                  <p>
+                    Nothing on the bench matches <span className="font-mono">“{query.trim()}”</span>.
+                    Try one of these:
+                  </p>
+                  <p className="sk__none-try">
+                    {["python", "react", "machine learning"].map((t) => (
+                      <button key={t} type="button" className="sk__none-chip" onClick={() => setQuery(t)}>
+                        {t}
+                      </button>
+                    ))}
+                    <button type="button" className="sk__none-clear" onClick={() => setQuery("")}>
+                      Clear search
+                    </button>
+                  </p>
+                </div>
               ) : null}
+            </div>
             </div>
           </section>
 
           {selected ? (
-            <aside className="sk__detail" aria-live="polite" ref={detailRef}>
-              <SkillDetail skill={selected} projects={projects} />
+            <aside
+              className={`sk__detail${picked ? " is-open" : ""}`}
+              aria-live="polite"
+              aria-label="Tool details"
+              tabIndex={-1}
+              ref={detailRef}
+            >
+              {/* map mode only: the panel floats over the wheel and closes */}
+              <button
+                type="button"
+                className="sk__detail-close"
+                onClick={closeDetails}
+                aria-label="Close details"
+              >
+                <Icon name="close" size={18} />
+              </button>
+              {picked ? (
+                <SkillDetail skill={selected} projects={projects} />
+              ) : (
+                <p className="sk__detail-empty">Pick a tool to see what I&apos;ve built with it.</p>
+              )}
             </aside>
           ) : null}
         </div>
@@ -305,7 +619,8 @@ function ToolGlyph({
 }) {
   const Icon = skillIcons[skill.id];
   if (Icon) return <Icon size={size} />;
-  const glyph = compact ? skill.name.charAt(0) : (skillGlyphs[skill.id] ?? skill.name.slice(0, 2));
+  // a tool with its own typeset mark (e.g. "OCR") shows it everywhere
+  const glyph = skillGlyphs[skill.id] ?? (compact ? skill.name.charAt(0) : skill.name.slice(0, 2));
   return (
     <span className="sk__glyph font-mono" data-len={glyph.length > 1 ? "long" : "short"}>
       {glyph}
@@ -349,7 +664,7 @@ function ToolRow({
         <ToolGlyph skill={skill} size={ROW_ICON[skill.id] ?? 18} compact />
       </span>
       <span className="sk__row-name">
-        <span className="sk__row-name-text">{skill.name}</span>
+        <span className="sk__row-name-text" translate="no">{skill.name}</span>
         {skill.current ? (
           <>
             <span className="sk__live-dot" aria-hidden />
@@ -358,7 +673,11 @@ function ToolRow({
         ) : null}
       </span>
       <span className="sk__row-cat">{skill.category}</span>
-      <span className="sk__row-work font-mono">
+      <span
+        className="sk__row-work font-mono"
+        // 3+ projects (or every project) reads in ink; 1–2 stays muted
+        data-heavy={skill.everyProject || (PROJECT_COUNT.get(skill.id) ?? 0) >= 3 ? "" : undefined}
+      >
         {work ? (
           <>
             {work.n ? <span className="sk__row-n">{work.n}</span> : null}
@@ -402,7 +721,7 @@ function SkillDetail({
           </span>
           <div className="sk__card-id">
             <h2 className="sk__card-name">
-              {skill.name}
+              <span translate="no">{skill.name}</span>
               {skill.current ? (
                 <span className="sk__status">
                   <span className="sk__live-dot" aria-hidden />
@@ -432,12 +751,7 @@ function SkillDetail({
 
         {hasWork ? <hr className="sk__rule" /> : null}
 
-        {skill.everyProject ? (
-          <>
-            <p className="sk__card-heading">Projects</p>
-            <p className="sk__every">Every project here — all of them live in Git.</p>
-          </>
-        ) : projects.length > 0 ? (
+        {projects.length > 0 ? (
           <>
             <p className="sk__card-heading">
               Built with it
@@ -449,11 +763,11 @@ function SkillDetail({
               {shown.map((p) => (
                 <li key={p.id}>
                   <TransitionLink
-                    href={`/projects?exhibit=${p.slug}`}
+                    href={`/projects?exhibit=${p.slug}&from=skills&tool=${skill.id}`}
                     className="sk__project"
                   >
                     <span className="sk__project-main">
-                      <span className="sk__project-name">{p.title}</span>
+                      <span className="sk__project-name" translate="no">{p.title}</span>
                       <span className="sk__project-cat font-mono">{p.category}</span>
                     </span>
                     <span className="sk__project-arrow" aria-hidden>

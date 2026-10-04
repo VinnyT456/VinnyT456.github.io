@@ -1,6 +1,19 @@
 import type { Metadata } from "next";
 import ProjectMuseum from "@/components/museum/ProjectMuseum";
 import { exhibits, exhibitSlug } from "@/data/museum";
+import { skillById } from "@/data/skills";
+
+/** `&from=` on a room link: where "Back to …" should go. Only known pages. */
+function returnFor(from: unknown, tool: unknown): { href: string; label: string } | null {
+  if (from === "skills") {
+    const t = typeof tool === "string" && skillById(tool) ? tool : null;
+    return { href: t ? `/skills?tool=${t}` : "/skills", label: "Skills" };
+  }
+  if (from === "home") return { href: "/", label: "home" };
+  if (from === "resume") return { href: "/resume", label: "résumé" };
+  // a shared link straight into a room: give the visitor a way into the site
+  return { href: "/", label: "home" };
+}
 
 const BASE_TITLE = "Projects — Vincent Tang";
 
@@ -33,7 +46,12 @@ export async function generateMetadata({
 export default async function ProjectsPage({
   searchParams,
 }: PageProps<"/projects">) {
-  const { exhibit } = await searchParams;
+  const { exhibit, from, tool } = await searchParams;
   const index = exhibitIndex(exhibit);
-  return <ProjectMuseum initialExhibit={index >= 0 ? index : null} />;
+  return (
+    <ProjectMuseum
+      initialExhibit={index >= 0 ? index : null}
+      returnTo={index >= 0 ? returnFor(from, tool) : null}
+    />
+  );
 }

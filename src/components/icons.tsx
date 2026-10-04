@@ -8,6 +8,8 @@ import type { SVGProps } from "react";
 const PATHS = {
   close: <path d="M6 6l12 12M18 6L6 18" />,
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
+  pause: <path d="M9 6.5v11M15 6.5v11" />,
+  play: <path d="M8.5 6.2v11.6a.6.6 0 00.9.5l9-5.8a.6.6 0 000-1l-9-5.8a.6.6 0 00-.9.5z" />,
   chevronRight: <path d="M10 6l6 6-6 6" />,
   grid: (
     <>

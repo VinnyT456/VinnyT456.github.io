@@ -24,6 +24,8 @@
   /* Cube spectrum (sticker colours; three/cubeColors.ts mirrors them for WebGL) */
   --cube-purple: #8b5cf6;
   --cube-sky: #0ea5e9;
+  --cube-blue: #3b82f6;
+  --cube-indigo: #6366f1;
   --cube-white: #f8f8ff;
   /* One-off atmosphere colours, each owned by one surface (DESIGN.md §2) */
   --atmosphere-steel: #5b7bd6; /* .site-atmosphere lower wash */
@@ -192,6 +194,9 @@ html.custom-cursor-active * {
    the ring/dot sat parked at the top-left corner on phones. */
 html:not(.custom-cursor-active) .custom-cursor__ring,
 html:not(.custom-cursor-active) .custom-cursor__dot { display: none; }
+/* until the pointer moves onto the page (and after it leaves), no cursor */
+html:not(.cursor-moved) .custom-cursor__ring,
+html:not(.cursor-moved) .custom-cursor__dot { opacity: 0; }
 
 .custom-cursor__ring {
   position: fixed;
@@ -511,8 +516,24 @@ html:not(.custom-cursor-active) .custom-cursor__dot { display: none; }
 .phone-home__face > span { border-radius: 2px; }
 
 /* ---- intro loader: skip ---- */
+/* very short screens (phones held sideways): the intro cube gets the space
+   above the caption stack, not the whole screen */
+@media (max-height: 520px) {
+  /* !important: R3F sets an inline height:100% that would win otherwise */
+  .loader-cube-canvas {
+    top: 0 !important;
+    bottom: max(8.5rem, calc(env(safe-area-inset-bottom) + 7.25rem)) !important;
+    height: auto !important;
+  }
+}
+/* the intro's bottom stack, from the floor up: Skip intro (2.75rem tall at
+   1.25rem), the progress dots (5rem), the caption (7.75rem) — each clears the
+   one below it, safe-area included (LoaderFrame) */
 .loader-skip {
-  padding: 0.5rem 1rem;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 1.1rem;
   border-radius: 9999px;
   border: 1px solid color-mix(in oklab, var(--foreground) 14%, transparent);
   background: color-mix(in oklab, var(--background) 60%, transparent);
@@ -548,8 +569,9 @@ html:not(.custom-cursor-active) .custom-cursor__dot { display: none; }
   isolation: isolate;
   display: flex;
   justify-content: safe center;
-  gap: 0.25rem;
-  padding: 0 0.5rem;
+  /* tight enough that all six fit a 390px phone; narrower ones scroll */
+  gap: 0.125rem;
+  padding: 0 0.25rem;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
@@ -653,40 +675,6 @@ html:not(.custom-cursor-active) .custom-cursor__dot { display: none; }
 }
 .hero-gh:hover { color: var(--foreground); }
 .hero-gh:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: var(--radius-sm); }
-
-/* A tapped face's confirm. Accent-outlined, not filled — the cube stays the
-   centerpiece; this is the one quiet "yes, go" beneath it. */
-.cube-open-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-height: 2.75rem;
-  padding: 0 1.1rem;
-  border-radius: 9999px;
-  border: 1px solid color-mix(in oklab, var(--accent) 55%, transparent);
-  background: color-mix(in oklab, var(--background) 82%, transparent);
-  color: var(--foreground);
-  font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: var(--text-xs);
-  white-space: nowrap;
-  backdrop-filter: blur(6px);
-  animation: cube-open-in 0.28s var(--ease-out) both;
-  transition: border-color 0.2s ease, background-color 0.2s ease;
-}
-.cube-open-btn span { color: var(--accent); transition: transform 0.2s var(--ease-out); }
-@media (hover: hover) {
-  .cube-open-btn:hover { border-color: var(--accent); }
-  .cube-open-btn:hover span { transform: translateX(3px); }
-}
-.cube-open-btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
-@keyframes cube-open-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .cube-open-btn { animation: none; }
-  .cube-open-btn span { transition: none; }
-}
 
 @media (min-width: 640px) {
   .cube-stage {
@@ -1388,6 +1376,13 @@ html.reduce-motion *::after {
   font-size: var(--text-xs);
   color: var(--t-faint);
 }
+.term__heading {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--t-ink);
+  white-space: nowrap;
+}
 
 /* scrollback */
 .term__scroll {
@@ -1483,7 +1478,9 @@ html.reduce-motion *::after {
 }
 .term__input {
   position: absolute;
-  inset: 0;
+  /* the real input is invisible (the mirror draws the text); it reaches a
+     little above and below the line so it's a full 44px to tap */
+  inset: calc((100% - 2.75rem) / 2) 0;
   width: 100%;
   background: transparent;
   border: 0;
@@ -1589,6 +1586,14 @@ html.reduce-motion *::after {
   background: color-mix(in oklab, var(--surface) 40%, var(--background));
 }
 .term__chips::-webkit-scrollbar { display: none; }
+/* phones: the row scrolls — its right edge fades so a cut-off chip reads as
+   "more this way", not as clipped text */
+@media (max-width: 640px) {
+  .term__chips {
+    -webkit-mask-image: linear-gradient(to right, black calc(100% - 4rem), transparent);
+    mask-image: linear-gradient(to right, black calc(100% - 4rem), transparent);
+  }
+}
 .term__chip {
   flex: none;
   min-height: 2rem;
@@ -1687,41 +1692,6 @@ html.reduce-motion .term__output--reveal { animation: none; }
 /* ---- timeline shell ----------------------------------------------------- */
 .xp__timeline { position: relative; }
 
-/* small secondary progress counter, aligned with the reading column */
-.xp__progress {
-  position: sticky;
-  top: clamp(4.5rem, 9vw, 6rem);
-  z-index: 1;
-  margin: 0 0 1.25rem 0;
-  width: max-content;
-  font-size: var(--text-xs);
-  letter-spacing: 0.08em;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-  pointer-events: none;
-}
-.xp__progress-n { color: var(--foreground); }
-.xp__progress-sep,
-.xp__progress-total { color: var(--muted); }
-/* keyboard hint — only after the visitor navigates with keys (html.kbd-used,
-   set by KeyboardModality); mouse and touch never see it */
-.xp__progress-keys {
-  display: none;
-  margin-left: 1rem;
-  letter-spacing: normal;
-  color: var(--muted);
-}
-.xp__progress-keys kbd {
-  display: inline-block;
-  margin-right: 0.15rem;
-  padding: 0.05rem 0.35rem;
-  border-radius: var(--radius-xs);
-  border: 1px solid color-mix(in oklab, var(--foreground) 18%, transparent);
-  font-family: var(--font-mono), monospace;
-  font-size: var(--text-2xs);
-  color: var(--muted);
-}
-html.kbd-used .xp__progress-keys { display: inline; }
 
 /* ---- the spine ---------------------------------------------------------- */
 .xp__list {
@@ -1897,14 +1867,15 @@ html.kbd-used .xp__progress-keys { display: inline; }
   letter-spacing: -0.01em;
 }
 .xp__meta { margin-top: 0.25rem; font-size: var(--text-xs); color: var(--muted); }
+/* the story now follows the results — context, one step quieter */
 .xp__note {
   margin-top: 1rem;
-  color: color-mix(in oklab, var(--foreground) 86%, transparent);
+  color: color-mix(in oklab, var(--foreground) 76%, transparent);
   line-height: 1.65;
   max-width: 60ch;
 }
 .xp__impact-label {
-  margin-top: 1.3rem;
+  margin-top: 1rem;
   font-size: var(--text-xs);
   font-weight: 500;
   color: var(--muted);
@@ -1920,10 +1891,17 @@ html.kbd-used .xp__progress-keys { display: inline; }
 .xp__highlights li {
   position: relative;
   padding-left: 1.35rem;
-  color: var(--muted);
+  color: color-mix(in oklab, var(--foreground) 88%, transparent);
   line-height: 1.55;
   max-width: 60ch;
 }
+.xp__fig { font-weight: 600; color: var(--foreground); }
+/* text "forming" (DecodeText — Experience role titles, project room titles):
+   the real text holds the layout while the cycling copy sits on top of it */
+.decode { position: relative; display: inline-block; }
+.decode[data-decoding] .decode-text { color: transparent; }
+.decode-fx { position: absolute; inset: 0; color: inherit; pointer-events: none; }
+.decode[data-decoding] .decode-fx { color: var(--decode-ink, currentColor); }
 .xp__highlights li::before {
   content: "—";
   position: absolute;
@@ -2015,7 +1993,6 @@ html.kbd-used .xp__progress-keys { display: inline; }
   .xp__spine { left: 0.27rem; }
   .xp__node { width: 0.56rem; height: 0.56rem; }
   .xp__item.is-active .xp__node { transform: scale(1.2); box-shadow: none; }
-  .xp__progress { top: 4rem; }
 }
 
 /* ---- reduced motion ----------------------------------------------------- */
@@ -2594,7 +2571,8 @@ body:has(.museum--intro) {
 .museum-intro__hud {
   position: fixed;
   left: 50%;
-  bottom: clamp(2.4rem, 8vh, 5rem);
+  /* caption + progress sit above the skip pill, one centred column */
+  bottom: calc(clamp(1.5rem, 5vh, 2.75rem) + 4rem);
   transform: translateX(-50%);
   z-index: 6;
   display: flex;
@@ -2604,6 +2582,10 @@ body:has(.museum--intro) {
   pointer-events: none;
 }
 .museum-intro__caption {
+  /* a soft backing so the road's centre line never runs through the words */
+  padding: 0.2rem 0.7rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--museum-night) 72%, transparent);
   font-size: var(--text-sm);
   letter-spacing: 0;
   color: color-mix(in oklab, var(--museum-ink) 72%, transparent);
@@ -2620,11 +2602,14 @@ body:has(.museum--intro) {
   height: 100%;
   background: color-mix(in oklab, var(--accent) 70%, var(--museum-ink));
 }
-/* skip control — quiet, top-right, out of the scene's way */
+/* skip control — centred under the caption, where the eye already is (a
+   top corner put it out of sight, and under the phone's corner buttons) */
 .museum-intro__skip {
   position: fixed;
-  top: max(1.1rem, env(safe-area-inset-top));
-  right: max(1.1rem, env(safe-area-inset-right));
+  left: 50%;
+  bottom: max(clamp(1.5rem, 5vh, 2.75rem), env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  white-space: nowrap;
   z-index: 7;
   min-height: 2.75rem;
   padding: 0 0.9rem;
@@ -2643,14 +2628,14 @@ body:has(.museum--intro) {
     background: color-mix(in oklab, var(--museum-night) 70%, transparent);
   }
 }
+/* phones: clear the bottom dock */
+@media (max-width: 767px) and (pointer: coarse) {
+  .museum-intro__skip { bottom: calc(4.5rem + max(0.5rem, env(safe-area-inset-bottom))); }
+  .museum-intro__hud { bottom: calc(8.5rem + max(0.5rem, env(safe-area-inset-bottom))); }
+}
 .museum-intro__skip:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-}
-/* Wherever the top nav pill shows, drop below it — at tablet widths the pill
-   spans far enough right to cover a top-corner button. */
-@media not ((max-width: 767px) and (pointer: coarse)) {
-  .museum-intro__skip { top: calc(max(1.1rem, env(safe-area-inset-top)) + 4rem); }
 }
 @keyframes museum-fade-in {
   from { opacity: 0; }
@@ -2958,20 +2943,25 @@ html.kbd-used .gallery-hint__keys { display: inline-flex; }
 }
 
 
-/* ---- The wayfinding rail: every hall control in one quiet bar ----
-   Floor plan (the index) left · walking (arrows, hall, dots, count) centre ·
-   where "next" goes right. Sits under the plaque, above the phone dock. */
+/* ---- The wayfinding rail: every hall control in one compact pill ----
+   Floor plan (the index) · walking (arrows, hall, dots, count) · where "next"
+   goes — three groups split by hairlines, the pill only as wide as they are,
+   centred. Margin-auto centring (not translate) so the enter animation's
+   transform can't knock it off-centre. Sits above the phone dock. */
 .gallery { --rail-bottom: clamp(1.1rem, 3.2vh, 1.75rem); }
 .gallery-rail {
   position: fixed;
   z-index: 6;
-  left: clamp(1.2rem, 4vw, 2.6rem);
-  right: clamp(1.2rem, 4vw, 2.6rem);
+  left: 0;
+  right: 0;
+  margin-inline: auto;
+  width: fit-content;
+  /* symmetric clearance for the corner cube launcher (7.75rem each side) */
+  max-width: calc(100vw - 15.5rem);
   bottom: var(--rail-bottom);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.25rem;
   min-height: 3.5rem;
   padding: 0.35rem 0.45rem 0.35rem 0.35rem;
   border-radius: 9999px;
@@ -2980,9 +2970,9 @@ html.kbd-used .gallery-hint__keys { display: inline-flex; }
   backdrop-filter: blur(10px);
 }
 .gallery-rail__plan {
-  justify-self: start;
-  display: inline-flex; align-items: center; gap: 0.55rem;
-  min-height: 2.75rem; padding: 0 1rem;
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  min-height: 2.75rem; padding: 0 0.85rem;
   border-radius: 9999px;
   color: var(--foreground);
   font-size: var(--text-sm);
@@ -2990,7 +2980,12 @@ html.kbd-used .gallery-hint__keys { display: inline-flex; }
   transition: background-color 200ms var(--ease-out), color 200ms var(--ease-out);
 }
 .gallery-rail__plan-count { color: var(--muted); font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
-.gallery-rail__walk { display: flex; align-items: center; gap: 0.35rem; }
+.gallery-rail__walk {
+  display: flex; align-items: center; gap: 0.15rem;
+  flex-shrink: 0;
+  padding-inline: 0.35rem;
+  border-inline: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
+}
 .gallery-rail__arrow {
   display: grid; place-items: center;
   width: 2.75rem; height: 2.75rem;
@@ -3006,9 +3001,9 @@ html.kbd-used .gallery-hint__keys { display: inline-flex; }
 .gallery-rail__dots { display: flex; }
 .gallery-rail__count { font-size: var(--text-xs); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; padding: 0 0.35rem; }
 .gallery-rail__next {
-  justify-self: end;
-  display: inline-flex; align-items: center; gap: 0.55rem;
-  min-height: 2.75rem; padding: 0 1rem;
+  flex: 0 1 auto;
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  min-height: 2.75rem; padding: 0 0.85rem;
   border-radius: 9999px;
   min-width: 0; max-width: 100%;
   text-align: right;
@@ -3016,6 +3011,7 @@ html.kbd-used .gallery-hint__keys { display: inline-flex; }
 }
 .gallery-rail__next-label { font-size: var(--text-xs); color: var(--muted); white-space: nowrap; }
 .gallery-rail__next-title {
+  max-width: 12rem;
   font-size: var(--text-sm); color: var(--foreground);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
 }
@@ -3033,14 +3029,9 @@ html.kbd-used .gallery-hint__keys { display: inline-flex; }
    dots / "next" name give way to the count (the plaque already names it) */
 @media (max-width: 640px) {
   .gallery { --rail-bottom: calc(var(--space-dock) + env(safe-area-inset-bottom) + 0.6rem); }
-  .gallery-rail { left: 0.75rem; right: 0.75rem; grid-template-columns: auto minmax(0, 1fr); gap: 0.25rem; }
+  .gallery-rail { left: 0.75rem; right: 0.75rem; width: auto; max-width: none; justify-content: space-between; gap: 0.25rem; }
   .gallery-rail__plan-label, .gallery-rail__dots, .gallery-rail__next { display: none; }
-  .gallery-rail__walk { justify-self: end; }
-}
-/* wherever the corner cube launcher shows (all but touch phones), the rail
-   stops short of it instead of running underneath */
-@media not ((max-width: 767px) and (pointer: coarse)) {
-  .gallery-rail { right: 7.75rem; }
+  .gallery-rail__walk { border-inline: 0; padding-inline: 0; }
 }
 /* mid widths: keep the next name but let it truncate before anything collides */
 @media (min-width: 641px) and (max-width: 1023px) {
@@ -3140,7 +3131,6 @@ html.kbd-used .gallery-hint__keys { display: inline-flex; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .museum-index__side { display: flex; flex-direction: column; align-items: flex-end; text-align: right; gap: 0.05rem; }
-.museum-index__side-val { font-size: var(--text-sm); color: var(--foreground); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .museum-index__side-label { font-size: var(--text-2xs); color: var(--muted); white-space: nowrap; }
 .museum-index__item[aria-current="true"] .museum-index__no { color: var(--ex-accent, var(--accent)); }
 @media (max-width: 520px) {
@@ -3364,9 +3354,14 @@ html.kbd-used .gallery-hint__keys { display: inline-flex; }
 .proom__demo-val { font-size: var(--text-sm); color: var(--proom-ink); }
 .proom__demo-arrow { align-self: center; color: var(--proom-accent); }
 
-.proom__exit {
+/* the room's way(s) out: back to the page you came from (when you arrived
+   from Skills, Home or the résumé) and back to the museum */
+.proom__exits {
   position: absolute; z-index: 4;
   top: clamp(4.5rem, 9vh, 6rem); right: clamp(1.2rem, 4vw, 2.6rem);
+  display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem;
+}
+.proom__exit {
   display: inline-flex; align-items: center; min-height: 2.75rem;
   padding: 0.55rem 1.05rem; border-radius: 9999px;
   border: 1px solid var(--proom-line);
@@ -3510,7 +3505,8 @@ html.kbd-used .gallery-hint__keys { display: inline-flex; }
 .proom {
   overflow: hidden;
   display: grid;
-  grid-template-columns: minmax(18rem, 27vw) minmax(0, 1fr) minmax(17rem, 25vw);
+  /* the centre (what it looks like) gets the most room — it's the first read */
+  grid-template-columns: minmax(17rem, 24vw) minmax(0, 1fr) minmax(16rem, 23vw);
   grid-template-rows: auto minmax(0, 1fr) auto auto;
   /* one job per column — left: what it is (label, then its story); centre:
      what it looks like (screens / exhibit, then how the demo runs); right:
@@ -3525,7 +3521,7 @@ html.kbd-used .gallery-hint__keys { display: inline-flex; }
   padding: clamp(4rem, 7vh, 5.5rem) clamp(1.1rem, 3.2vw, 2.6rem) clamp(1rem, 2.5vh, 1.5rem);
 }
 .proom__plaque { grid-area: plaque; position: relative; inset: auto; max-width: none; width: 100%; padding-bottom: 0.4rem; }
-.proom__exit {
+.proom__exits {
   position: absolute; z-index: 5;
   top: clamp(0.9rem, 2.4vh, 1.4rem); right: clamp(1.1rem, 3.2vw, 2.6rem); inset-inline-start: auto;
 }
@@ -3540,8 +3536,34 @@ html.kbd-used .gallery-hint__keys { display: inline-flex; }
   /* soft fade at the foot says "more below"; the bottom padding means the last
      line is fully clear once you scroll to it */
   padding-bottom: 2rem;
-  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 2rem), transparent);
-  mask-image: linear-gradient(to bottom, black calc(100% - 2rem), transparent);
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 3.5rem), transparent);
+  mask-image: linear-gradient(to bottom, black calc(100% - 3.5rem), transparent);
+}
+/* the fade alone was easy to miss: a column with more below says so. A
+   sibling laid over the column's foot (not inside it, where the fade would
+   swallow it); desktop only — tabbed screens scroll one section at a time */
+.proom__more { display: none; }
+@media (min-width: 1100px) and (min-height: 700px) {
+  .proom__more {
+    display: block;
+    align-self: end;
+    justify-self: center;
+    z-index: 4;
+    margin-bottom: 0.25rem;
+    padding: 0.15rem 0.6rem;
+    border-radius: 9999px;
+    border: 1px solid var(--proom-line);
+    background: color-mix(in oklab, var(--museum-night) 85%, transparent);
+    font-family: var(--font-mono), monospace;
+    font-size: var(--text-2xs);
+    color: var(--proom-ink);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s var(--ease-out);
+  }
+  .proom__more--story { grid-area: story; }
+  .proom__more--tech { grid-area: tech; }
+  .proom__panel[data-more] + .proom__more { opacity: 1; }
 }
 .proom__panel--story { grid-area: story; }
 .proom__panel--tech { grid-area: tech; }
@@ -3573,7 +3595,8 @@ html.kbd-used .gallery-hint__keys { display: inline-flex; }
   /* a long section scrolls inside its own area; the room never grows past
      the screen */
   .proom__panel { overflow-y: auto; padding-right: 0.25rem; }
-  .proom__exit { position: fixed; top: max(0.7rem, env(safe-area-inset-top)); right: 0.8rem; }
+  /* the exits row (not each button) pins to the corner, so they sit side by side */
+  .proom__exits { position: fixed; top: max(0.7rem, env(safe-area-inset-top)); right: 0.8rem; }
   .proom__stage { height: clamp(7rem, 17vh, 9rem); min-height: 0; }
   .proom[data-room-section="story"] .proom__stage,
   .proom[data-room-section="build"] .proom__stage,
@@ -3794,6 +3817,28 @@ html.kbd-used .gallery-hint__keys { display: inline-flex; }
 }
 .pworld-edge { fill: none; stroke: currentColor; stroke-width: 0.6; opacity: 0.4; }
 @keyframes pw-pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+/* the room assembles: its centrepiece line art draws itself stroke by stroke
+   on entry (and again on Prev/Next — the glyph is keyed per exhibit). A long
+   dash swept to 0 needs no per-path lengths; short strokes simply finish
+   first. Nodes draw, then fall into their usual pulse. */
+.proom__still-glyph--draw .pworld-art__svg :is(line, path, rect, circle, ellipse, polyline, polygon) {
+  stroke-dasharray: 260;
+  stroke-dashoffset: 260;
+  animation: pworld-draw 1.3s var(--ease-out) 0.2s forwards;
+}
+.proom__still-glyph--draw .pworld-art__svg .pworld-node {
+  animation:
+    pworld-draw 1.3s var(--ease-out) 0.4s forwards,
+    pw-pulse 2.6s ease-in-out 1.7s infinite;
+}
+@keyframes pworld-draw { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .proom__still-glyph--draw .pworld-art__svg :is(line, path, rect, circle, ellipse, polyline, polygon) {
+    animation: none;
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+  }
+}
 /* slow drift on the cube so it reads as 3D */
 .pworld-cube { transform-origin: 53px 47px; animation: pw-cube 14s ease-in-out infinite alternate; }
 @keyframes pw-cube { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
@@ -3851,7 +3896,7 @@ html:has(.museum)::-webkit-scrollbar {
   padding-block: clamp(3rem, 8vw, 6rem);
 }
 .sk__intro {
-  margin-bottom: clamp(2.25rem, 5vw, 3.25rem);
+  margin-bottom: clamp(1.5rem, 3.5vw, 2.25rem);
   max-width: 44rem;
 }
 .sk__title {
@@ -3968,6 +4013,317 @@ html.kbd-used .sk__keys { display: inline-flex; margin-left: auto; }
   border-radius: 50%;
   background: var(--status-live);
 }
+/* ---- Map | List: the map is the default on wide screens; below 960px the
+   page is the still wheel above the list ---- */
+.sk__views-toggle { display: none; }
+.sk__orbit-btn { display: none; }
+/* hidden with visibility, not display:none, everywhere: the brand icons share
+   gradient ids, and a display:none copy blanks every later one */
+.sk__views[data-view="list"] .sk-wheel {
+  visibility: hidden;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+@media (min-width: 960px) {
+  .sk__orbit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    min-height: 2.75rem;
+    border-radius: 9999px;
+    border: 1px solid color-mix(in oklab, var(--foreground) 12%, transparent);
+    color: var(--muted);
+    transition: color 0.2s ease, background-color 0.2s ease;
+  }
+  .sk__orbit-btn:hover { color: var(--foreground); }
+  .sk__orbit-btn[aria-pressed="true"] { color: var(--foreground); background: color-mix(in oklab, var(--foreground) 9%, transparent); }
+  .sk__orbit-btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  .sk:has(.sk__views[data-view="list"]) .sk__orbit-btn,
+  .sk:has(.sk__views[data-view="list"]) .sk__lead-map { display: none; }
+  .sk__views-toggle {
+    display: inline-flex;
+    padding: 0.2rem;
+    gap: 0.15rem;
+    border-radius: 9999px;
+    border: 1px solid color-mix(in oklab, var(--foreground) 12%, transparent);
+  }
+  .sk__views:not([data-view="list"]) .sk__ledger {
+    visibility: hidden;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+}
+.sk__view-btn {
+  min-height: 2.75rem;
+  min-width: 3.5rem;
+  padding: 0 0.9rem;
+  border-radius: 9999px;
+  font-size: var(--text-xs);
+  color: var(--muted);
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+.sk__view-btn[aria-pressed="true"] {
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--foreground) 9%, transparent);
+}
+.sk__view-btn:hover { color: var(--foreground); }
+.sk__view-btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+/* ---- map mode (wide screens, map view): the wheel takes the full width; the
+   detail panel floats over its right side only once a tool is picked ---- */
+.sk__detail-close { display: none; }
+@media (min-width: 960px) {
+  .sk__layout:has(.sk__views:not([data-view="list"])) {
+    grid-template-columns: minmax(0, 1fr);
+    position: relative;
+  }
+  .sk__layout:has(.sk__views:not([data-view="list"])) .sk__detail {
+    position: absolute;
+    top: 4.5rem;
+    right: 0;
+    z-index: 120;
+    width: min(23rem, 38%);
+    /* never taller than the screen: long project lists scroll inside */
+    max-height: min(calc(100% - 5rem), calc(100svh - 7rem));
+    opacity: 0;
+    visibility: hidden;
+    translate: 0.75rem 0;
+    transition: opacity 0.25s var(--ease-out), translate 0.25s var(--ease-out), visibility 0s linear 0.25s;
+    box-shadow: 0 10px 15px -3px color-mix(in oklab, var(--shade) 20%, transparent);
+  }
+  .sk__layout:has(.sk__views:not([data-view="list"])) .sk__detail.is-open {
+    opacity: 1;
+    visibility: visible;
+    translate: 0 0;
+    transition: opacity 0.25s var(--ease-out), translate 0.25s var(--ease-out);
+  }
+  .sk__layout:has(.sk__views:not([data-view="list"])) .sk__detail-close {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+    font-size: var(--text-xl);
+    color: var(--muted);
+  }
+  .sk__detail-close:hover { color: var(--foreground); background: color-mix(in oklab, var(--foreground) 8%, transparent); }
+  .sk__detail-close:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  .sk__detail:focus { outline: none; }
+  .sk__detail:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+  /* map mode: the toolbar sits over the top of the stage, whose far edge is
+     empty sky, so the disc rises into the fold */
+  .sk__layout:has(.sk__views:not([data-view="list"])) .sk__controls {
+    position: relative;
+    z-index: 130;
+    margin-bottom: 0;
+  }
+  .sk-wheel--gl .sk-wheel__stage { margin-top: -5.5rem; }
+  /* map view: the disc runs nearly down to the footer */
+  .sk:has(.sk-wheel--gl):has(.sk__views:not([data-view="list"])) { padding-bottom: 1.5rem; }
+  /* the SVG fallback slides out from under open details too */
+  .sk-wheel:not(.sk-wheel--gl) .sk-wheel__stage { transition: translate 0.45s var(--ease-out); }
+  .sk__layout:has(.sk__detail.is-open) .sk-wheel:not(.sk-wheel--gl) .sk-wheel__stage { translate: -16% 0; }
+}
+/* the WebGL wheel gets a wider stage than the SVG one */
+/* full-bleed: the wheel breaks out of the content column so the big disc is
+   never cropped; its sides dissolve into the night instead of hard edges */
+.sk-wheel--gl .sk-wheel__stage {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  /* sized by width AND height: the whole wheel fits one screen */
+  height: clamp(30rem, min(62vw, 100svh - 4rem), 80rem);
+  /* soft on every side, so the canvas has no edge against the page */
+  -webkit-mask-image:
+    linear-gradient(to right, transparent, var(--shade) 4%, var(--shade) 96%, transparent),
+    linear-gradient(to bottom, transparent, var(--shade) 6%, var(--shade) 96%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to right, transparent, var(--shade) 4%, var(--shade) 96%, transparent),
+    linear-gradient(to bottom, transparent, var(--shade) 6%, var(--shade) 96%, transparent);
+  mask-composite: intersect;
+}
+.sk:has(.sk-wheel--gl), .sk:has(.sk-wheel--compact) { overflow-x: clip; }
+.sk-wheel__canvas { position: absolute !important; inset: 0; }
+/* GL medallions are placed by transform each frame (no layout); hidden until
+   the first frame has put them on their orbits */
+.sk-wheel--gl .sk-medal { left: 0; top: 0; }
+.sk-wheel--gl:not([data-placed]) .sk-medal { visibility: hidden; }
+/* while the 3D loads: a faint ring silhouette where the disc will land */
+.sk-wheel__ghost {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: min(78vw, 70rem);
+  aspect-ratio: 1 / 0.42;
+  translate: -50% -50%;
+  rotate: -6deg;
+  border-radius: 50%;
+  border: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+.sk-wheel__loading {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  translate: -50% -50%;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.sk-wheel__ghost::after {
+  content: "";
+  position: absolute;
+  inset: 30%;
+  border-radius: 50%;
+  border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+/* phones: the still wheel, full-bleed above the list */
+.sk-wheel--compact { margin-bottom: clamp(1.5rem, 5vw, 2rem); }
+.sk-wheel--compact .sk-wheel__stage {
+  aspect-ratio: 390 / 384;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  max-width: 40rem;
+}
+@media (min-width: 40rem) {
+  .sk-wheel--compact .sk-wheel__stage { margin-inline: auto; width: 100%; }
+}
+.sk-wheel--compact .sk-wheel__dust circle { animation: none !important; opacity: 0.6; }
+.sk-wheel--compact .sk-wheel__caption { text-align: center; }
+.sk-wheel--compact .sk-medal__live { width: 0.35rem; height: 0.35rem; }
+/* too tight at phone width for standing labels: the list below names them */
+.sk-wheel--compact .sk-medal.is-named:not(.is-selected) .sk-medal__name { opacity: 0; }
+@media (max-width: 959px) {
+  /* clear the floating cube button at the end of the list */
+  .sk { padding-bottom: calc(clamp(3rem, 8vw, 6rem) + 4rem); }
+}
+
+/* ---- the orrery (SkillsWheel) ---- */
+.sk-wheel { margin: 0; }
+.sk-wheel__stage { position: relative; aspect-ratio: 800 / 470; }
+.sk-wheel__svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.sk-wheel__ring { fill: none; stroke: color-mix(in oklab, var(--foreground) 26%, transparent); stroke-width: 1; }
+.sk-wheel__ring--faint { stroke: color-mix(in oklab, var(--foreground) 12%, transparent); }
+.sk-wheel__ticks {
+  fill: none;
+  stroke: color-mix(in oklab, var(--foreground) 22%, transparent);
+  stroke-width: 3;
+  stroke-dasharray: 1 9;
+}
+.sk-wheel__glyph { fill: color-mix(in oklab, var(--foreground) 70%, var(--accent)); opacity: 0.85; }
+.sk-wheel__axes line {
+  stroke: color-mix(in oklab, var(--foreground) 22%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 1 6;
+}
+.sk-wheel__core { opacity: 0.9; }
+/* star dust: violet-white grains that twinkle on three offset clocks */
+.sk-wheel__dust circle { fill: color-mix(in oklab, var(--accent) 55%, var(--foreground)); }
+@keyframes sk-twinkle { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+.sk:not(.sk--static) .sk-wheel__dust .tw-1 { animation: sk-twinkle 2.6s ease-in-out infinite; }
+.sk:not(.sk--static) .sk-wheel__dust .tw-2 { animation: sk-twinkle 3.7s ease-in-out infinite; }
+.sk:not(.sk--static) .sk-wheel__dust .tw-3 { animation: sk-twinkle 5.1s ease-in-out infinite; }
+.sk-wheel__links line {
+  stroke: color-mix(in oklab, var(--link, var(--accent)) 40%, color-mix(in oklab, var(--foreground) 75%, transparent));
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+/* medallions: dark disc, silver border, four diamond notches, the tool's logo */
+.sk-wheel__medals { position: absolute; inset: 0; }
+.sk-medal {
+  /* --n: px at reference size; --k: the wheel's scale (set by the wheel) */
+  --size: calc(var(--n) * var(--k, 1) * 1px);
+  position: absolute;
+  width: var(--size);
+  height: var(--size);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--museum-deep);
+  /* the far side of the disc draws smaller (less crowding where the rings
+     converge), the near side a touch larger; the ::before hit area is sized
+     so even the smallest stays a 44px target */
+  transform: translate(-50%, -50%) scale(calc(0.84 + var(--depth) * 0.22));
+  opacity: calc(0.82 + var(--depth) * 0.18);
+  transition: opacity 0.25s ease;
+  cursor: pointer;
+}
+.sk-medal__frame { position: absolute; inset: -3px; width: calc(100% + 6px); height: calc(100% + 6px); overflow: visible; }
+.sk-medal__frame circle { fill: none; stroke: color-mix(in oklab, var(--foreground) 62%, transparent); stroke-width: 2.4; transition: stroke 0.2s ease; }
+.sk-medal__frame rect { fill: color-mix(in oklab, var(--foreground) 62%, transparent); transition: fill 0.2s ease; }
+.sk-medal__icon { position: relative; display: grid; place-items: center; scale: var(--k, 1); }
+/* scaled below 44px, a medallion still answers a 44px tap or click */
+/* 53px before the far-side 0.84× scale = 44px on screen */
+.sk-medal::before { content: ""; position: absolute; inset: min(0px, calc((var(--size) - 53px) / 2)); border-radius: 50%; }
+.sk-medal__live {
+  position: absolute;
+  top: 6%;
+  right: 6%;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--status-live);
+  box-shadow: 0 0 0 2px var(--museum-deep);
+}
+.sk-medal__name {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 50%;
+  translate: -50% 0;
+  white-space: nowrap;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-xs);
+  background: color-mix(in oklab, var(--background) 86%, transparent);
+  font-size: var(--text-xs);
+  color: var(--foreground);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.sk-medal:hover, .sk-medal:focus-visible, .sk-medal.is-lit, .sk-medal.is-selected { opacity: 1; }
+.sk-medal:hover .sk-medal__name,
+.sk-medal:focus-visible .sk-medal__name,
+.sk-medal.is-selected .sk-medal__name,
+.sk-medal.is-named .sk-medal__name,
+.sk-medal.is-front .sk-medal__name { opacity: 1; }
+/* the daily drivers' names stay up, a step quieter than a hovered one */
+.sk-medal:is(.is-named, .is-front):not(:hover, :focus-visible, .is-selected) .sk-medal__name {
+  color: color-mix(in oklab, var(--foreground) 88%, transparent);
+  /* a dark halo keeps standing names legible over the bright nebula */
+  text-shadow: 0 0 6px var(--background), 0 0 2px var(--background);
+  background: transparent;
+  top: calc(100% + 0.15rem);
+}
+/* after a pick, tools it didn't ship with drop their names: less to read */
+.sk-wheel .sk-medal:is(.is-named, .is-front).is-dim .sk-medal__name { opacity: 0; }
+/* second-ring names fade out round the back, where medallions crowd */
+/* second-ring names show only on the front of the ring — fully readable or
+   hidden, never a faint grey in between */
+.sk-medal.is-named--fade:not(:hover, :focus-visible, .is-selected) .sk-medal__name {
+  opacity: clamp(0, calc((var(--depth) - 0.42) * 100), 1);
+}
+.sk-medal:hover .sk-medal__frame circle,
+.sk-medal.is-lit .sk-medal__frame circle { stroke: var(--foreground); }
+.sk-medal:hover .sk-medal__frame rect,
+.sk-medal.is-lit .sk-medal__frame rect { fill: var(--foreground); }
+.sk-medal.is-selected .sk-medal__frame circle { stroke: var(--brand); stroke-width: 3.4; }
+.sk-medal.is-selected .sk-medal__frame rect { fill: var(--brand); }
+.sk-medal.is-dim { opacity: 0.28; }
+.sk-medal:focus-visible { outline: 2px solid var(--ring); outline-offset: 4px; }
+.sk-wheel__caption { margin-top: 0.75rem; font-size: var(--text-xs); color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sk-wheel__dust circle { animation: none; }
+}
+
 /* ---- the ledger: tools grouped by how much they're actually used ---- */
 .sk__ledger { display: flex; flex-direction: column; gap: clamp(1.75rem, 4vw, 2.5rem); }
 .sk__group-head { margin-bottom: 0.6rem; }
@@ -4024,14 +4380,18 @@ html.kbd-used .sk__keys { display: inline-flex; margin-left: auto; }
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.sk__row-n { font-size: var(--text-sm); color: var(--foreground); }
+.sk__row-n { font-size: var(--text-sm); color: var(--muted); font-variant-numeric: tabular-nums; }
+.sk__row-work[data-heavy] .sk__row-n { color: var(--foreground); font-weight: 600; }
 .sk__row-unit { font-size: var(--text-2xs); color: var(--muted); }
-.sk__none { font-size: var(--text-sm); color: var(--muted); }
 .sk__none-clear {
-  color: var(--accent);
+  min-height: 2.75rem;
+  padding: 0 0.4rem;
+  color: var(--foreground);
   text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--foreground) 35%, transparent);
   text-underline-offset: 3px;
 }
+.sk__none-clear:hover { text-decoration-color: var(--foreground); }
 .sk__none-clear:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: var(--radius-xs); }
 /* narrow: drop the category column, keep name + work */
 @media (max-width: 640px) {
@@ -4127,8 +4487,7 @@ html.kbd-used .sk__keys { display: inline-flex; margin-left: auto; }
   color: var(--muted);
 }
 .sk__meta-sep { color: color-mix(in oklab, var(--foreground) 25%, transparent); }
-.sk__level--primary { color: var(--accent); }
-.sk__level--academic { color: color-mix(in oklab, var(--cube-sky) 70%, var(--foreground)); } /* cube-sky */
+/* tiers read in the meta's own muted ink: the accent isn't for labels */
 .sk__status {
   display: inline-flex;
   align-items: center;
@@ -4213,7 +4572,7 @@ html.kbd-used .sk__keys { display: inline-flex; margin-left: auto; }
   margin-top: 0.5rem;
   min-height: 2.75rem;
   width: 100%;
-  border: 1px dashed color-mix(in oklab, var(--foreground) 14%, transparent);
+  border: 1px solid color-mix(in oklab, var(--foreground) 12%, transparent);
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
   color: var(--muted);
@@ -4221,7 +4580,6 @@ html.kbd-used .sk__keys { display: inline-flex; margin-left: auto; }
 }
 .sk__more:hover { color: var(--foreground); border-color: color-mix(in oklab, var(--foreground) 28%, transparent); }
 .sk__more:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
-.sk__every { font-size: var(--text-sm); color: color-mix(in oklab, var(--foreground) 76%, transparent); }
 /* coursework — compact rows, deliberately not a transcript */
 .sk__courses { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
 .sk__course { display: flex; flex-direction: column; gap: 0.15rem; }
@@ -4378,6 +4736,16 @@ html.kbd-used .sk__keys { display: inline-flex; margin-left: auto; }
   transition: text-decoration-color 0.2s ease;
 }
 .rez__entry-link:hover { text-decoration-color: var(--accent); }
+/* 24px to look at, a 44px tap area around it (like the terminal chips) */
+.rez__entry-link, .rez__link { position: relative; }
+.rez__entry-link::after,
+.rez__link::after {
+  content: "";
+  position: absolute;
+  inset: 50% -0.25rem auto;
+  height: 2.75rem;
+  transform: translateY(-50%);
+}
 .rez__entry-link:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: var(--radius-xs); }
 .rez__bullets {
   margin: 0.55rem 0 0;
@@ -4461,7 +4829,8 @@ html.kbd-used .sk__keys { display: inline-flex; margin-left: auto; }
 /* ============================================================ *
  *  Contact — open channel                                      *
  * ============================================================ */
-.ct { width: 100%; padding-block: clamp(2rem, 4vw, 3.25rem); }
+/* same title line as the other inner pages (one shared spine and top pad) */
+.ct { width: 100%; padding-block: clamp(3rem, 8vw, 6rem); }
 .ct__intro { max-width: 42rem; margin-bottom: clamp(1.5rem, 3vw, 2rem); }
 .ct__title {
   font-size: var(--text-page-title);
@@ -4470,7 +4839,7 @@ html.kbd-used .sk__keys { display: inline-flex; margin-left: auto; }
   letter-spacing: -0.025em;
 }
 .ct__lead {
-  margin-top: 0.8rem;
+  margin-top: 1.1rem;
   color: var(--muted);
   font-size: var(--text-page-lead);
   line-height: 1.55;
@@ -4478,14 +4847,16 @@ html.kbd-used .sk__keys { display: inline-flex; margin-left: auto; }
 }
 
 /* ---- the panel ---- */
+/* lighter at rest: a faint hairline and barely-lifted ground, more air
+   between fields — the form, not its box, carries the page */
 .ct__panel {
-  border: 1px solid color-mix(in oklab, var(--foreground) 12%, transparent);
+  border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
   border-radius: var(--radius-lg);
-  padding: clamp(1.25rem, 3vw, 1.75rem);
-  background: color-mix(in oklab, var(--surface) 45%, var(--background));
+  padding: clamp(1.25rem, 3vw, 2rem);
+  background: color-mix(in oklab, var(--surface) 22%, var(--background));
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
+  gap: 1.35rem;
 }
 .ct__panel-head {
   display: flex;
@@ -4496,7 +4867,10 @@ html.kbd-used .sk__keys { display: inline-flex; margin-left: auto; }
   padding-bottom: 1.1rem;
   border-bottom: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
 }
-.ct__from { font-size: var(--text-sm); color: var(--foreground); }
+.ct__compose { flex: 1; display: grid; gap: 0.3rem; margin: 0; font-size: var(--text-sm); color: var(--foreground); min-width: 0; }
+.ct__compose-row { display: grid; grid-template-columns: 3.5rem minmax(0, 1fr); align-items: baseline; }
+.ct__compose dd { margin: 0; overflow-wrap: anywhere; }
+.ct__compose-empty { color: var(--muted); }
 .ct__from-label { color: var(--muted); }
 /* the channel really is open — a quiet live breathe (matches the xp "now" badge) */
 @keyframes ct-channel-breathe {
@@ -4558,6 +4932,7 @@ html.kbd-used .sk__keys { display: inline-flex; margin-left: auto; }
   padding: 0.6rem 0.8rem;
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
+.ct__input { min-height: 2.75rem; }
 .ct__textarea { resize: vertical; min-height: 7rem; line-height: 1.55; }
 /* iOS Safari zoom-jumps on focusing any input under 16px — hold the visible
    text inputs at 16px on phones so tapping a field never triggers the zoom. */
@@ -4869,6 +5244,39 @@ html.kbd-used .sk__keys { display: inline-flex; margin-left: auto; }
 .hh-open span { color: var(--accent); transition: transform 0.2s var(--ease-out); }
 
 /* the rest: a quiet list */
+.hh-lead-points {
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.45rem;
+  max-width: 52ch;
+}
+.hh-lead-points li {
+  position: relative;
+  padding-left: 1rem;
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  color: color-mix(in oklab, var(--foreground) 72%, transparent);
+  text-wrap: pretty;
+}
+.hh-lead-points li::before {
+  content: "";
+  position: absolute;
+  left: 0.15rem;
+  top: 0.7em;
+  width: 0.35rem;
+  height: 1px;
+  background: color-mix(in oklab, var(--foreground) 45%, transparent);
+}
+/* the left column: the lead, then the portfolio itself on a hairline */
+.hh-main { display: flex; flex-direction: column; min-width: 0; }
+.hh-item--under { border-top: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent); max-width: 52ch; }
+/* wide: the portfolio rests on the column's floor, so both columns end on
+   the same line (the lead takes the slack above it) */
+@media (min-width: 900px) {
+  .hh-item--under { margin-top: auto; }
+}
 .hh-list { list-style: none; margin: 0; padding: 0; }
 .hh-list > li + li { border-top: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent); }
 .hh-item {
@@ -4930,6 +5338,16 @@ html.kbd-used .sk__keys { display: inline-flex; margin-left: auto; }
 }
 .hh-now-label { font-size: var(--text-base); font-weight: 500; color: var(--foreground); }
 .hh-now-text { max-width: 60ch; font-size: var(--text-base); line-height: 1.6; color: color-mix(in oklab, var(--foreground) 82%, transparent); text-wrap: pretty; }
+.hh-now-link {
+  font-weight: 500;
+  color: var(--foreground);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--foreground) 35%, transparent);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.2s ease;
+}
+.hh-now-link:hover { text-decoration-color: var(--foreground); }
+.hh-now-link:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: var(--radius-xs); }
 .hh-now-stack { margin-top: 0.75rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem 0.75rem; font-size: var(--text-sm); }
 .hh-now-stack-label { color: var(--muted); }
 .hh-stack { display: inline-flex; flex-wrap: wrap; row-gap: 0.25rem; color: color-mix(in oklab, var(--foreground) 82%, transparent); }
@@ -5132,3 +5550,199 @@ html.kbd-used .sk__keys { display: inline-flex; margin-left: auto; }
   .nf__btn { transition: border-color 0.2s ease, background-color 0.2s ease; }
   @media (hover: hover) { .nf__btn:hover { transform: none; } }
 }
+
+/* phones: back from a tool's details to the wheel; details clear the dock */
+.sk__back-map { display: none; }
+@media (max-width: 959px) {
+  .sk__inline-detail { scroll-margin-bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
+  .sk__back-map {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 2.75rem;
+    margin-top: 0.5rem;
+    padding: 0 0.9rem;
+    border-radius: 9999px;
+    font-size: var(--text-xs);
+    color: var(--muted);
+  }
+  .sk__back-map:hover { color: var(--foreground); }
+  .sk__back-map:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+}
+
+/* ---- finishing pass ---- */
+/* toolbar: search with the dot's key beside it, view tools grouped right */
+.sk__view-tools { display: none; }
+@media (min-width: 960px) {
+  .sk__view-tools { display: inline-flex; align-items: center; gap: 0.35rem; margin-left: auto; }
+  html.kbd-used .sk__keys { margin-left: 0; }
+}
+/* no matches: the details step aside instead of contradicting the result */
+.sk__layout:has(.sk__none) .sk__detail { visibility: hidden; }
+.sk__none { display: grid; gap: 0.75rem; font-size: var(--text-sm); color: var(--muted); }
+.sk__none-try { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.sk__none-chip {
+  min-height: 2.75rem;
+  padding: 0 0.9rem;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in oklab, var(--foreground) 14%, transparent);
+  font-family: var(--font-mono), monospace;
+  font-size: var(--text-xs);
+  color: var(--foreground);
+  transition: border-color 0.2s ease;
+}
+.sk__none-chip:hover { border-color: color-mix(in oklab, var(--foreground) 32%, transparent); }
+.sk__none-chip:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+/* list view before a pick: a quiet prompt instead of an unasked-for tool */
+.sk__detail-empty {
+  padding: 1.5rem;
+  border: 1px dashed color-mix(in oklab, var(--foreground) 12%, transparent);
+  border-radius: var(--radius-xl);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+/* phones: the tapped row lands below the corner badge; names stay off the
+   small wheel even when picked (the details below name it) */
+@media (max-width: 959px) {
+  .sk__rows > li { scroll-margin-top: 5rem; }
+  .sk-wheel--compact .sk-medal__name { display: none; }
+  .sk-wheel--compact { margin-top: -1rem; }
+  .sk-wheel--compact .sk-wheel__caption { margin-bottom: 2rem; }
+}
+
+/* the stack in words under the lead */
+.sk__stack { margin-top: 0.75rem; font-size: var(--text-sm); color: var(--muted); max-width: 60ch; }
+.sk__stack-label { color: var(--foreground); font-weight: 500; }
+/* an inline link in a sentence (target-size exempt), padded for an easier hit */
+.sk__stack-link {
+  padding-block: 0.35rem;
+  color: var(--foreground);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--foreground) 35%, transparent);
+  text-underline-offset: 3px;
+}
+.sk__stack-link:hover { text-decoration-color: var(--foreground); }
+.sk__stack-link { position: relative; }
+.sk__stack-link::after { content: ""; position: absolute; inset: 50% -0.25rem auto; height: 2.75rem; transform: translateY(-50%); }
+.sk__stack-link:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: var(--radius-xs); }
+
+/* the wheel's nucleus: a quiet button over the cube that stands the wheel up
+   (an atom diagram — flat shells, every name showing) and lays it back down */
+.sk-wheel__core-btn {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 130;
+  width: calc(4rem * var(--k, 1));
+  height: calc(4rem * var(--k, 1));
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: box-shadow 0.25s var(--ease-out), background-color 0.25s var(--ease-out);
+}
+.sk-wheel--gl:not([data-placed]) .sk-wheel__core-btn { visibility: hidden; }
+/* no outline at rest (the cube is the face); hover / focus ring it and show
+   what it'll do */
+.sk-wheel__core-btn:hover {
+  box-shadow: 0 0 0 1.5px color-mix(in oklab, var(--foreground) 55%, transparent);
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+}
+.sk-wheel__core-btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+.sk-wheel__core-hint {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 50%;
+  translate: -50% 0;
+  white-space: nowrap;
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--radius-xs);
+  background: color-mix(in oklab, var(--background) 86%, transparent);
+  font-family: var(--font-mono), monospace;
+  font-size: var(--text-2xs);
+  color: var(--muted);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s var(--ease-out);
+}
+.sk-wheel__core-btn:is(:hover, :focus-visible) .sk-wheel__core-hint { opacity: 1; }
+/* stood up, every ring reads at once: all names show (dimmed tools excepted) */
+.sk-wheel.is-flat .sk-medal:not(.is-dim) .sk-medal__name { opacity: 1; }
+.sk-wheel.is-flat .sk-medal:not(:hover, :focus-visible, .is-selected) .sk-medal__name {
+  color: color-mix(in oklab, var(--foreground) 78%, transparent);
+  background: transparent;
+  top: calc(100% + 0.15rem);
+}
+
+/* stood up: names point away from the nucleus — beside the medallion on the
+   left and right, above it at the top — never across to the next shell in */
+.sk-wheel.is-flat .sk-medal__name { font-size: var(--text-2xs); text-shadow: 0 0 6px var(--background), 0 0 2px var(--background); }
+.sk-wheel.is-flat .sk-medal[data-side="l"] .sk-medal__name {
+  top: 50%; left: auto; right: calc(100% + 0.35rem); translate: 0 -50%;
+}
+.sk-wheel.is-flat .sk-medal[data-side="r"] .sk-medal__name {
+  top: 50%; left: calc(100% + 0.35rem); translate: 0 -50%;
+}
+.sk-wheel.is-flat .sk-medal[data-side="t"] .sk-medal__name {
+  top: auto; bottom: calc(100% + 0.2rem);
+}
+/* the shells stay legible with details open: dimmed tools fade, not vanish */
+.sk-wheel.is-flat .sk-medal.is-dim { opacity: 0.38; }
+/* the "in use now" dot scales with its medallion */
+.sk-wheel .sk-medal__live { width: calc(0.45rem * var(--k, 1)); height: calc(0.45rem * var(--k, 1)); }
+
+/* stood up: a name that would land on a neighbour steps back (hover / focus
+   still shows it) */
+.sk-wheel.is-flat .sk-medal.name-off:not(:hover, :focus-visible, .is-selected) .sk-medal__name { opacity: 0; }
+
+/* web-interface pass: the details panel scrolls without dragging the page,
+   and tier headings land clear of the fixed nav when linked to */
+.sk__detail { overscroll-behavior: contain; }
+.sk__group { scroll-margin-top: 6rem; }
+.sk__group-count, .sk__count-inline { font-variant-numeric: tabular-nums; }
+
+/* an organization with its own page links out from the timeline */
+.xp__org-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, currentColor 35%, transparent);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.2s ease;
+}
+.xp__org-link:hover { text-decoration-color: currentColor; }
+.xp__org-link:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: var(--radius-xs); }
+
+/* desktop room hierarchy: title and centrepiece lead; the story and build
+   columns are supporting detail, a step back in tone (still AA on the room) */
+@media (min-width: 1100px) and (min-height: 700px) {
+  .proom__story-item dd,
+  .proom__fact dd,
+  .proom__highlights li { color: color-mix(in oklab, var(--proom-ink) 82%, transparent); }
+}
+
+/* 44px tap areas for links that sit in a sentence or alone on a line */
+.xp__org-link, .xp__link, .hh-now-link { position: relative; }
+.xp__org-link::after, .xp__link::after, .hh-now-link::after {
+  content: "";
+  position: absolute;
+  inset: 50% -0.15rem auto;
+  height: 2.75rem;
+  transform: translateY(-50%);
+}
+/* desktop room: the build column starts below the exit buttons */
+@media (min-width: 1100px) and (min-height: 700px) {
+  .proom__panel--tech { padding-top: 3.25rem; }
+}
+/* hero cube loading: a faint, slowly breathing outline in the cube's place */
+.cube-loading { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+.cube-loading__face {
+  width: min(40%, 12rem);
+  aspect-ratio: 1;
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in oklab, var(--accent) 35%, transparent);
+  rotate: 45deg;
+  animation: cube-breathe 1.8s ease-in-out infinite;
+}
+@keyframes cube-breathe { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.8; } }
+@media (prefers-reduced-motion: reduce) { .cube-loading__face { animation: none; opacity: 0.5; } }

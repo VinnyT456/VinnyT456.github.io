@@ -115,7 +115,7 @@ export default function NotFoundWorkshop() {
 
       <p className="nf__hint font-mono" aria-live="polite">
         {spins === 0
-          ? "psst — the 0 spins."
+          ? "psst, the 0 spins."
           : spins < 5
             ? "there you go."
             : "okay, you can stop now."}

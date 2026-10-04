@@ -83,7 +83,7 @@ export const skills: Skill[] = [
     category: "Languages",
     brandColor: "#3776AB",
     description:
-      "My main language — ML models, backends, bots, automation, and desktop apps.",
+      "My main language: ML models, backends, bots, automation, and desktop apps.",
     usageLevel: "primary",
     current: true,
     usedFor: ["Machine learning", "Backend", "Automation", "Desktop apps"],
@@ -91,7 +91,7 @@ export const skills: Skill[] = [
       {
         code: "15-112",
         title: "Fundamentals of Programming and Computer Science",
-        note: "Carnegie Mellon — a full Sudoku game as the term project.",
+        note: "Carnegie Mellon: a full Sudoku game as the term project.",
       },
     ],
     match: ["Python"],
@@ -102,7 +102,7 @@ export const skills: Skill[] = [
     category: "Languages",
     brandColor: "#3178C6",
     description:
-      "Typed JavaScript for the web side — from job dashboards to a deterministic combat simulator.",
+      "Typed JavaScript for the web side, from job dashboards to a deterministic combat simulator.",
     usageLevel: "primary",
     current: true,
     usedFor: ["Web apps", "Simulation", "UI"],
@@ -126,7 +126,7 @@ export const skills: Skill[] = [
     category: "Languages",
     brandColor: "#00599C",
     description:
-      "Native macOS tools in C++ and Objective-C++ — screen capture, key events, MIDI parsing, and a custom HUD.",
+      "Native macOS tools in C++ and Objective-C++: screen capture, key events, MIDI parsing, and a custom HUD.",
     usageLevel: "working",
     current: true,
     usedFor: ["Native macOS", "Real-time input", "Parsing"],
@@ -140,7 +140,7 @@ export const skills: Skill[] = [
     category: "Frontend",
     brandColor: "#61DAFB",
     description:
-      "My default for interfaces — component-driven UIs across most of my web projects.",
+      "My default for interfaces: component-driven UIs across most of my web projects.",
     usageLevel: "primary",
     current: true,
     usedFor: ["UI", "Dashboards", "Interactive apps"],
@@ -152,7 +152,7 @@ export const skills: Skill[] = [
     category: "Frontend",
     brandColor: "#EDEDED",
     description:
-      "App-Router React for full-stack sites — including this portfolio.",
+      "App-Router React for full-stack sites, including this portfolio.",
     usageLevel: "working",
     current: true,
     usedFor: ["Full-stack web", "Routing", "SSR"],
@@ -176,7 +176,7 @@ export const skills: Skill[] = [
     category: "Frontend",
     brandColor: "#EDEDED",
     description:
-      "WebGL on the web — the self-solving cube, the starfield, and the walkable museum on this site.",
+      "WebGL on the web: the self-solving cube, the starfield, and the walkable museum on this site.",
     usageLevel: "working",
     current: true,
     usedFor: ["3D / WebGL", "Interactive scenes"],
@@ -190,7 +190,7 @@ export const skills: Skill[] = [
     category: "Backend",
     brandColor: "#009688",
     description:
-      "Async Python services — the health server and résumé-PDF service behind my internship bot.",
+      "Async Python services: the health server and résumé-PDF service behind my internship bot.",
     usageLevel: "working",
     current: true,
     usedFor: ["APIs", "Backend services"],
@@ -202,7 +202,7 @@ export const skills: Skill[] = [
     category: "Backend",
     brandColor: "#3FCF8E",
     description:
-      "Postgres as a backend — job postings, résumés, and shareable game levels across several apps.",
+      "Postgres as a backend: job postings, résumés, and shareable game levels across several apps.",
     usageLevel: "working",
     current: true,
     usedFor: ["Database", "Storage", "Sync"],
@@ -227,7 +227,7 @@ export const skills: Skill[] = [
     category: "AI & ML",
     brandColor: "#EE4C2C",
     description:
-      "Deep learning — a chest X-ray classifier, DQN agents, and a sticker-color model for the cube solver.",
+      "Deep learning: a chest X-ray classifier, DQN agents, and a sticker-color model for the cube solver.",
     usageLevel: "working",
     current: false,
     usedFor: ["Deep learning", "Computer vision", "RL"],
@@ -239,7 +239,7 @@ export const skills: Skill[] = [
     category: "AI & ML",
     brandColor: "#F7931E",
     description:
-      "Classical ML and evaluation — a spam classifier, plus metrics like per-class ROC-AUC.",
+      "Classical ML and evaluation: a spam classifier, plus metrics like per-class ROC-AUC.",
     usageLevel: "working",
     current: false,
     usedFor: ["Classification", "Evaluation"],
@@ -251,7 +251,7 @@ export const skills: Skill[] = [
     category: "AI & ML",
     brandColor: "#5C3EE8",
     description:
-      "Computer vision — reading a Rubik's cube from a webcam and cropping questions out of scanned pages.",
+      "Computer vision: reading a Rubik's cube from a webcam and cropping questions out of scanned pages.",
     usageLevel: "working",
     current: false,
     usedFor: ["Computer vision", "Image processing"],
@@ -263,7 +263,7 @@ export const skills: Skill[] = [
     category: "AI & ML",
     brandColor: "#8AB4F8",
     description:
-      "LLM features with guardrails — a four-agent résumé pipeline and \"what if\" life simulations.",
+      "LLM features with guardrails: a four-agent résumé pipeline and \"what if\" life simulations.",
     usageLevel: "working",
     current: true,
     usedFor: ["LLM apps", "Agents", "Generation"],
@@ -299,7 +299,7 @@ export const skills: Skill[] = [
     category: "Data & Desktop",
     brandColor: "#11557C",
     description:
-      "Plots and training curves — and the code a desktop app generates for you.",
+      "Plots and training curves, plus the code a desktop app generates for you.",
     usageLevel: "working",
     current: false,
     usedFor: ["Visualization", "Training plots"],
@@ -311,7 +311,7 @@ export const skills: Skill[] = [
     category: "Data & Desktop",
     brandColor: "#41CD52",
     description:
-      "Desktop GUIs in Python — a chart builder and a webcam cube scanner.",
+      "Desktop GUIs in Python: a chart builder and a webcam cube scanner.",
     usageLevel: "working",
     current: false,
     usedFor: ["Desktop apps", "GUI"],
@@ -323,7 +323,7 @@ export const skills: Skill[] = [
     category: "Data & Desktop",
     brandColor: "#FF4B4B",
     description:
-      "Quick interactive ML apps — train, predict, and visualize in the browser.",
+      "Quick interactive ML apps: train, predict, and visualize in the browser.",
     usageLevel: "academic",
     current: false,
     usedFor: ["ML apps", "Dashboards"],
@@ -337,7 +337,7 @@ export const skills: Skill[] = [
     category: "Automation & Testing",
     brandColor: "#43B02A",
     description:
-      "Browser automation — walking a question bank filter by filter and exporting every set.",
+      "Browser automation: walking a question bank filter by filter and exporting every set.",
     usageLevel: "working",
     current: false,
     usedFor: ["Browser automation", "Scraping"],
@@ -349,7 +349,7 @@ export const skills: Skill[] = [
     category: "Automation & Testing",
     brandColor: "#9AA7B8",
     description:
-      "OCR — turning scanned PDF pages into structured, drillable question data.",
+      "OCR: turning scanned PDF pages into structured, drillable question data.",
     usageLevel: "working",
     current: false,
     usedFor: ["OCR", "Document parsing"],
@@ -361,7 +361,7 @@ export const skills: Skill[] = [
     category: "Automation & Testing",
     brandColor: "#729B1B",
     description:
-      "Fast unit tests for TypeScript — keeping a simulation core honest as mechanics are added.",
+      "Fast unit tests for TypeScript, keeping a simulation core honest as mechanics are added.",
     usageLevel: "working",
     current: true,
     usedFor: ["Unit tests", "Regression tests"],
@@ -385,7 +385,7 @@ export const skills: Skill[] = [
     category: "Automation & Testing",
     brandColor: "#23D96C",
     description:
-      "Behavior-driven specs — card-game rules written as scenarios before the code.",
+      "Behavior-driven specs: card-game rules written as scenarios before the code.",
     usageLevel: "academic",
     current: false,
     usedFor: ["BDD", "Specs"],
@@ -411,7 +411,7 @@ export const skills: Skill[] = [
     category: "Tooling",
     brandColor: "#2496ED",
     description:
-      "Containerized services — the LaTeX résumé builder ships as its own Docker service.",
+      "Containerized services: the LaTeX résumé builder ships as its own Docker service.",
     usageLevel: "working",
     current: true,
     usedFor: ["Deployment", "Environments"],

@@ -8,7 +8,7 @@ export const site = {
   seeking: "SWE internships",
   headline: "CS student at Northwestern, seeking SWE internships",
   tagline:
-    "I ship real product — and build the playful stuff for the joy of it. Interfaces, APIs, and the occasional 3D toy that refuses to sit still.",
+    "I ship real product, and I build the playful stuff for the joy of it. Interfaces, APIs, and the occasional 3D toy that refuses to sit still.",
   email: "vincent03280608@gmail.com",
   github: "https://github.com/VinnyT456",
   linkedin: "https://www.linkedin.com/in/vt07/",
@@ -19,7 +19,7 @@ export const site = {
   // Real profile URLs only — linking the GitHub/LinkedIn homepage is worse than none.
   socials: [] as { label: string; href: string }[],
   about: [
-    "CS student at Northwestern who builds across the stack: interfaces, APIs, data. The cube on this page is the other half — it scrambles, solves, then hands you the controls. I can't leave a clever interaction unbuilt.",
+    "CS student at Northwestern who builds across the stack: interfaces, APIs, data. The cube on this page is the other half: it scrambles, solves, then hands you the controls. I can't leave a clever interaction unbuilt.",
     "If the work is real, the site should prove it before the résumé does. Drag the cube. Then look at Projects, or email me.",
   ],
   aboutHero: {
@@ -28,9 +28,9 @@ export const site = {
   },
   projects: [
     {
-      title: "This site",
+      title: "Personal Portfolio",
       description:
-        "A dark, interactive portfolio. The hero cube solves itself, then you orbit it — the page is the demo, not a screenshot of one.",
+        "A dark, interactive portfolio. The hero cube solves itself, then you orbit it. The page is the demo, not a screenshot of one.",
       tags: ["Next.js", "Three.js", "WebGL"],
       href: "",
       year: "2026",

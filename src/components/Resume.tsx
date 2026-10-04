@@ -44,7 +44,7 @@ export default function Resume() {
 
   return (
     <main id="main" className="rez page-stage flex-1">
-      <div className="rez__inner page-x mx-auto w-full max-w-4xl">
+      <div className="rez__inner page-x mx-auto w-full max-w-5xl">
         <header className="rez__intro">
           <h1 className="rez__title">My résumé.</h1>
           <p className="rez__lead">{summary}</p>
@@ -154,7 +154,7 @@ export default function Resume() {
                   <div className="rez__entry-head">
                     <h3 className="rez__entry-title">
                       <TransitionLink
-                        href={`/projects?exhibit=${exhibitSlug(p)}`}
+                        href={`/projects?exhibit=${exhibitSlug(p)}&from=resume`}
                         className="rez__entry-link"
                       >
                         {p.title}

@@ -104,6 +104,13 @@ export default function Contact() {
   const recheck = (next: { name: string; email: string; message: string }) => {
     if (tried) setErrors(validate(next));
   };
+  // leaving a field you've typed in checks just that field (an email typo
+  // shows before Send); an empty field waits for the first submit
+  const checkOnBlur = (field: Field, value: string) => {
+    if (tried || !value.trim()) return;
+    const found = validate({ name, email, message })[field];
+    setErrors((cur) => ({ ...cur, [field]: found }));
+  };
 
   const mailtoFallback = `mailto:${site.email}?subject=${encodeURIComponent(
     "Portfolio message"
@@ -148,7 +155,7 @@ export default function Contact() {
             </span>
             <h1 className="ct__done-title">Message received.</h1>
             <p className="ct__done-sub">
-              It landed in my inbox — I read every one. Talk soon.
+              It landed in my inbox, and I read every one. Talk soon.
             </p>
             {/* a receipt in the About terminal's voice — the workshop signs off */}
             <pre className="ct__receipt font-mono" aria-hidden>
@@ -192,10 +199,9 @@ export default function Contact() {
     >
       <div className="ct__inner page-x mx-auto w-full max-w-5xl">
         <header className="ct__intro">
-          <h1 className="ct__title">Let&apos;s build something.</h1>
+          <h1 className="ct__title">Get in touch.</h1>
           <p className="ct__lead">
-            Have an idea, opportunity, or questionable side project? Send it my
-            way.
+            Questions, opportunities, or just want to say hi? My inbox is open.
           </p>
           {/* phones stack the form above "Elsewhere" — so the code links a
               dev peer wants come first here, as one quiet line */}
@@ -213,9 +219,24 @@ export default function Contact() {
         <div className="ct__grid">
         <form className="ct__panel" onSubmit={onSubmit} noValidate>
           <div className="ct__panel-head">
-            <p className="ct__from font-mono">
-              <span className="ct__from-label">To</span> Vincent&apos;s inbox
-            </p>
+            {/* reads like a message being composed — sets up the
+                `mail --to vincent` receipt after sending */}
+            <dl className="ct__compose font-mono">
+              <div className="ct__compose-row">
+                <dt className="ct__from-label">To</dt>
+                <dd>Vincent&apos;s inbox</dd>
+              </div>
+              {/* mirrors the fields below as you type (the fields themselves
+                  are what assistive tech reads, so this stays visual) */}
+              <div className="ct__compose-row" aria-hidden>
+                <dt className="ct__from-label">From</dt>
+                <dd className={name.trim() || email.trim() ? undefined : "ct__compose-empty"}>
+                  {name.trim() || email.trim()
+                    ? `${name.trim() || "you"}${email.trim() ? ` <${email.trim()}>` : ""}`
+                    : "you"}
+                </dd>
+              </div>
+            </dl>
           </div>
 
           <div className="ct__row">
@@ -232,6 +253,7 @@ export default function Contact() {
                 setName(e.target.value);
                 recheck({ name: e.target.value, email, message });
               }}
+              onBlur={(e) => checkOnBlur("name", e.target.value)}
               autoComplete="name"
               required
               aria-invalid={errors.name ? true : undefined}
@@ -257,6 +279,7 @@ export default function Contact() {
                 setEmail(e.target.value);
                 recheck({ name, email: e.target.value, message });
               }}
+              onBlur={(e) => checkOnBlur("email", e.target.value)}
               autoComplete="email"
               spellCheck={false}
               autoCapitalize="off"

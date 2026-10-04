@@ -42,8 +42,11 @@ type Stage = "INTRO" | "GALLERY" | "ENTERING" | "WORLD" | "EXITING";
  */
 export default function ProjectMuseum({
   initialExhibit = null,
+  returnTo = null,
 }: {
   initialExhibit?: number | null;
+  /** where a deep link came from, for the room's "Back to …" */
+  returnTo?: { href: string; label: string } | null;
 }) {
   const reduced = useReducedMotion();
   const mounted = useMounted();
@@ -485,7 +488,8 @@ export default function ProjectMuseum({
 
   return (
     <main id="main" className={cn("museum", `museum--${stage.toLowerCase()}`)}>
-      <h1 className="sr-only">Projects</h1>
+      {/* inside a room the project's own title is the page heading */}
+      {selected == null ? <h1 className="sr-only">Projects</h1> : null}
       {/* City → museum approach (separate scene), hands off to the gallery. */}
       {stage === "INTRO" ? (
         <MuseumScene onEnter={enterFromIntro} projectCount={exhibits.length} />
@@ -711,6 +715,7 @@ export default function ProjectMuseum({
             onExit={exit}
             onPrev={() => goProject(selected - 1)}
             onNext={() => goProject(selected + 1)}
+            returnTo={returnTo}
           />
         </div>
       ) : null}
@@ -786,7 +791,6 @@ function MuseumIndex({
                 <ol className="museum-index__rows" start={start + 1}>
                   {hall.map((ex, k) => {
                     const i = start + k;
-                    const lead = ex.technical?.metrics?.[0];
                     return (
                       <li key={ex.id}>
                         <button
@@ -805,15 +809,10 @@ function MuseumIndex({
                             </span>
                             <span className="museum-index__desc">{ex.description}</span>
                           </span>
+                          {/* the main technology only — the floor plan is for finding
+                              a project, not weighing results (those live in each room) */}
                           <span className="museum-index__side">
-                            {lead ? (
-                              <>
-                                <span className="museum-index__side-val font-mono">{lead.value}</span>
-                                <span className="museum-index__side-label">{lead.label}</span>
-                              </>
-                            ) : (
-                              <span className="museum-index__side-label">{ex.technologies[0]}</span>
-                            )}
+                            <span className="museum-index__side-label">{ex.technologies[0]}</span>
                           </span>
                         </button>
                       </li>

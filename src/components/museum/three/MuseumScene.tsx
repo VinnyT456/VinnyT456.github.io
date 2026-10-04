@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePageTransition } from "@/components/transitions/PageTransitionProvider";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useReducedMotion } from "@/lib/media";
 import City from "./City";
@@ -8,11 +9,11 @@ import Museum, { MUSEUM_Z } from "./Museum";
 
 /**
  * The approach, in real Three.js: a line-art city and a museum with doors that
- * open as the camera automatically walks in over ~3.2s, then hands off to the
+ * open as the camera automatically walks in over ~4s, then hands off to the
  * gallery. Plays once per session (ProjectMuseum), is skippable, and reduced-motion jumps
  * straight in.
  */
-const WALK_MS = 3200;
+const WALK_MS = 4000;
 const WALK_END = 0.62; // progress at which the walk finishes and the camera parks
 
 export default function MuseumScene({
@@ -29,11 +30,25 @@ export default function MuseumScene({
   const done = useRef(false);
   const rafId = useRef(0);
 
+  // Arriving through the page transition, the cover is still on screen when
+  // this mounts — hold the walk until it has fully revealed the page, so the
+  // whole 4s plays where the visitor can see it.
+  const { busy: transitioning } = usePageTransition();
+  // ...but never wait forever: a very slow device gets the walk after 8s
+  const [waitedOut, setWaitedOut] = useState(false);
+  useEffect(() => {
+    if (!transitioning) return;
+    const t = window.setTimeout(() => setWaitedOut(true), 8000);
+    return () => window.clearTimeout(t);
+  }, [transitioning]);
+  const holding = transitioning && !waitedOut;
+
   useEffect(() => {
     if (reduced) {
       onEnter();
       return;
     }
+    if (holding) return;
     let start = 0;
     const tick = (now: number) => {
       if (!start) start = now;
@@ -53,7 +68,7 @@ export default function MuseumScene({
     };
     rafId.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId.current);
-  }, [reduced, onEnter]);
+  }, [reduced, onEnter, holding]);
 
   if (reduced) return null;
 

@@ -169,8 +169,8 @@ export default function RubikModal({ onClose }: { onClose: () => void }) {
             {result ? (
               <div className="rubik-modal__result" role="status">
                 <strong>Solved in {formatMs(result.ms)}</strong> · {result.moves} moves
-                {result.isBestTime ? <em> — best time!</em> : null}
-                {!result.isBestTime && result.isBestMoves ? <em> — fewest moves!</em> : null}
+                {result.isBestTime ? <em> (best time!)</em> : null}
+                {!result.isBestTime && result.isBestMoves ? <em> (fewest moves!)</em> : null}
               </div>
             ) : (
               <p className="rubik-modal__hint">
@@ -237,7 +237,7 @@ export default function RubikModal({ onClose }: { onClose: () => void }) {
 
             {board.length === 0 ? (
               <p className="rubik-modal__empty">
-                No solves yet. Scramble the cube and beat it — your best times land here.
+                No solves yet. Scramble the cube and beat it. Your best times land here.
               </p>
             ) : (
               <ol className="rubik-modal__scores">

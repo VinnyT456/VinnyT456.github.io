@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: `${site.name} — ${site.headline}`,
   description:
-    "Vincent Tang, a CS student at Northwestern seeking SWE internships, ships real product — and builds the playful stuff for the joy of it. Interactive 3D portfolio.",
+    "Vincent Tang, a CS student at Northwestern seeking SWE internships, ships real product and builds the playful stuff for the joy of it. Interactive 3D portfolio.",
 };
 
 export const viewport: Viewport = {

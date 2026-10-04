@@ -246,12 +246,16 @@ const whoami: Command = {
       { text: site.name, tone: "accent" },
       { text: `${site.headline}.` },
       { text: "" },
-      { text: "I build full-stack apps, machine-learning projects," },
-      { text: "and the occasional native tool — usually because I" },
-      { text: "want to see if the idea actually works." },
+      // one paragraph, so it wraps to the screen beside the avatar (hard line
+      // breaks left ragged ends on phones)
+      {
+        text: "I build full-stack apps, machine-learning projects, and the occasional native tool, usually because I want to see if the idea actually works.",
+      },
       { text: "" },
       { text: "\nCurrently:" },
       { text: "  → studying computer science at Northwestern" },
+      { text: "  → student researcher at Northwestern Knight Lab (Look Again)" },
+      { text: "  → software engineer at Northwestern Forge" },
       { text: "  → consulting aide at NU Student Affairs IT" },
       { text: "  → building a Genshin combat sim + an internship bot" },
       { text: "  → and whatever else won't leave me alone" },
@@ -699,7 +703,7 @@ const git: Command = {
         { subject: "polish the terminal on /about" },
         { subject: "add the project museum" },
         ...projectList().slice(0, 3).map(({ exhibit }) => ({ subject: `ship ${exhibit.title}` })),
-        { subject: "start the computer science journey" },
+        { subject: "start computer science" },
       ];
       const oneline = args.includes("--oneline");
       const lines: Line[] = [];
@@ -1141,7 +1145,7 @@ function suggestCommand(name: string): string | null {
 // Deadpan lines for a total miss (no near match). Picked by input hash so the
 // same typo always gets the same quip, but variety across different misses.
 const MISS_QUIPS = [
-  "not a command — but I respect the confidence.",
+  "not a command, but I respect the confidence.",
   "that's not a thing here. `help` is, though.",
   "unknown incantation. try `help`.",
   "nope. the shell has no idea either.",

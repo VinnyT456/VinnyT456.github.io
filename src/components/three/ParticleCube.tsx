@@ -466,7 +466,6 @@ function CubeCloud({
 const FACE_ROUTES = navLinks.map((l) => ({ href: l.href, label: l.label }));
 const TAP_SLOP = 8; // px of movement below which a pointer up counts as a tap
 const DOUBLE_TAP_MS = 320; // two taps within this window = scramble
-const ARM_MS = 5000; // how long a picked face waits for its "Open →" confirm
 const FACE_SETTLE_MS = 300;
 
 export type ParticleCubeVariant = "nav" | "about";
@@ -520,15 +519,11 @@ export default function ParticleCube({
   const [scrambleToken, setScrambleToken] = useState(0);
   const hover = useRef(0);
   const pressStart = useRef<{ x: number; y: number; moved: number } | null>(null);
-  // A tap *picks* the front face (arms it) and shows an "Open →" button; a
-  // second tap on the same armed face, or the button, navigates. A double-tap
-  // scrambles. So a stray tap — or a thumb that meant to scroll — never throws
-  // the visitor off the page. We detect the double-tap ourselves (native
-  // dblclick fires too late), deferring the single-tap action past its window.
+  // A tap on the front face opens its page; a double-tap scrambles. We detect
+  // the double-tap ourselves (native dblclick fires too late), deferring the
+  // single-tap action past its window.
   const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTapAt = useRef(0);
-  const [armedHref, setArmedHref] = useState<string | null>(null);
-  const disarmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isAbout = variant === "about";
   const budget = useMemo(
     () =>
@@ -551,9 +546,6 @@ export default function ParticleCube({
 
   const frontRoute =
     variant === "nav" && frontFace >= 0 ? FACE_ROUTES[frontFace] : null;
-  // Armed only while the same face is still in front — turning disarms it.
-  const armedRoute =
-    frontRoute && armedHref === frontRoute.href ? frontRoute : null;
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -683,21 +675,16 @@ export default function ParticleCube({
       return;
     }
 
-    // Nav mode — defer past the window so a double-tap can win. First tap
-    // arms the face; a later tap on the same armed face opens it.
+    // Nav mode — one tap on a face opens its page, deferred just past the
+    // double-tap window so a double-tap can still win (and scramble). A drag
+    // never counts as a tap (TAP_SLOP), so a thumb that meant to spin or
+    // scroll doesn't throw the visitor off the page.
     if (frontRoute) {
       const href = frontRoute.href;
-      const alreadyArmed = armedRoute?.href === href;
       if (tapTimer.current) clearTimeout(tapTimer.current);
       tapTimer.current = setTimeout(() => {
         tapTimer.current = null;
-        if (alreadyArmed) {
-          navigate(href);
-          return;
-        }
-        setArmedHref(href);
-        if (disarmTimer.current) clearTimeout(disarmTimer.current);
-        disarmTimer.current = setTimeout(() => setArmedHref(null), ARM_MS);
+        navigate(href);
       }, DOUBLE_TAP_MS + 20);
     }
   }
@@ -729,7 +716,6 @@ export default function ParticleCube({
   useEffect(
     () => () => {
       if (tapTimer.current) clearTimeout(tapTimer.current);
-      if (disarmTimer.current) clearTimeout(disarmTimer.current);
     },
     []
   );
@@ -814,7 +800,7 @@ export default function ParticleCube({
       {/* Floating route hint — appears on hover/focus. Parked low in the stage,
           around the CTA-button height, below the cube's lowest particles so it
           never overlaps the geometry. */}
-      {variant === "nav" && frontRoute && !armedRoute ? (
+      {variant === "nav" && frontRoute ? (
         <span
           aria-hidden
           className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-foreground/10 bg-background/70 px-3 py-1 font-mono text-xs text-muted opacity-0 backdrop-blur-sm transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100"
@@ -823,17 +809,6 @@ export default function ParticleCube({
         </span>
       ) : null}
     </div>
-    {/* The picked face's confirm — a sibling of the cube (not nested in its
-        role=button) so it is a real, separately focusable control. */}
-    {armedRoute ? (
-      <button
-        type="button"
-        className="cube-open-btn absolute bottom-3 left-1/2 z-10 -translate-x-1/2"
-        onClick={() => navigate(armedRoute.href)}
-      >
-        Open {armedRoute.label} <span aria-hidden>→</span>
-      </button>
-    ) : null}
     </>
   );
 }

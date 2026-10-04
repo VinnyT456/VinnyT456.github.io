@@ -4,8 +4,10 @@ import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react"
 import type { Exhibit, StationKey } from "@/data/museum";
 import { useCompactRoom, useTabbedRoom } from "@/lib/media";
 import ProjectArt from "./ProjectArt";
+import DecodeText from "@/components/DecodeText";
 import { Icon } from "@/components/icons";
 import { site } from "@/data/site";
+import TransitionLink from "@/components/transitions/TransitionLink";
 
 // The centerpiece is the only heavy (R3F/WebGL) part of the room; load it lazily
 // so entering a project doesn't block on the 3D bundle.
@@ -54,11 +56,14 @@ export default function ProjectRoom({
   onExit,
   onPrev,
   onNext,
+  returnTo,
 }: {
   exhibit: Exhibit;
   index: number;
   total: number;
   onExit: () => void;
+  /** the page that linked into this room (Skills, Home, résumé) */
+  returnTo?: { href: string; label: string } | null;
   onPrev: () => void;
   onNext: () => void;
 }) {
@@ -140,6 +145,28 @@ export default function ProjectRoom({
     return () => window.removeEventListener("keydown", handleKey);
   }, [handleKey]);
 
+  // A column with more below than fits gets data-more, which shows a quiet
+  // "more ↓" cue at its foot (the story/build columns scroll on their own).
+  const roomRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const root = roomRef.current;
+    if (!root) return;
+    const panels = Array.from(root.querySelectorAll<HTMLElement>(".proom__panel"));
+    const update = (el: HTMLElement) =>
+      el.toggleAttribute("data-more", el.scrollHeight - el.scrollTop - el.clientHeight > 6);
+    const onScroll = (e: Event) => update(e.currentTarget as HTMLElement);
+    const ro = new ResizeObserver(() => panels.forEach(update));
+    panels.forEach((el) => {
+      update(el);
+      el.addEventListener("scroll", onScroll, { passive: true });
+      ro.observe(el);
+    });
+    return () => {
+      ro.disconnect();
+      panels.forEach((el) => el.removeEventListener("scroll", onScroll));
+    };
+  }, [exhibit.id, activeSection]);
+
   // Each room names its tab (history, tab strip, screen-reader page title),
   // then restores the museum's title on the way out. (A deep-linked room
   // already has this title from the server, so "prev" can't be trusted.)
@@ -201,6 +228,7 @@ export default function ProjectRoom({
 
   return (
     <section
+      ref={roomRef}
       className="proom"
       style={{ ["--proom-accent" as string]: exhibit.theme.accent }}
       role="dialog"
@@ -227,9 +255,10 @@ export default function ProjectRoom({
       <header className="proom__plaque">
         {/* No eyebrow above the title — position lives in the pager below;
             meta reads in the same order as the hall plaque. */}
-        <h2 className="proom__title" ref={titleRef} tabIndex={-1}>
-          <Line>{exhibit.title}</Line>
-        </h2>
+        <h1 className="proom__title" ref={titleRef} tabIndex={-1}>
+          {/* the room assembles: the title forms as you step in */}
+          <DecodeText key={exhibit.id} text={exhibit.title} play />
+        </h1>
         <p className="proom__meta">
           <Line>{exhibit.year}</Line> · <Line>{exhibit.category}</Line>
         </p>
@@ -258,10 +287,17 @@ export default function ProjectRoom({
         ) : null}
       </header>
 
-      {/* --- Back to museum (top-right) --- */}
-      <button type="button" className="proom__exit" onClick={onExit}>
-        ← Back to museum
-      </button>
+      {/* --- Ways out (top-right): the page you came from, and the museum --- */}
+      <div className="proom__exits">
+        {returnTo ? (
+          <TransitionLink href={returnTo.href} className="proom__exit">
+            ← Back to {returnTo.label}
+          </TransitionLink>
+        ) : null}
+        <button type="button" className="proom__exit" onClick={onExit}>
+          {returnTo ? "Museum" : "← Back to museum"}
+        </button>
+      </div>
 
       {/* Small screens only: one section at a time, as real tabs. On laptops
           and up every section is visible at once, so no tab row renders. */}
@@ -379,6 +415,7 @@ export default function ProjectRoom({
           })}
         </dl>
       </section>
+      <span className="proom__more proom__more--story" aria-hidden>more ↓</span>
 
       {/* --- Proof + build panel (right): results first (the numbers), then the
           notable details, then the stack and how it's put together. --- */}
@@ -449,6 +486,7 @@ export default function ProjectRoom({
           </div>
         ) : null}
       </section>
+      <span className="proom__more proom__more--tech" aria-hidden>more ↓</span>
 
       {/* --- Navigation: prev / next through the museum --- */}
       <nav className="proom__nav" aria-label="Move through the museum">
@@ -595,7 +633,8 @@ function CompactCenterpiece({
     // eslint-disable-next-line @next/next/no-img-element
     <img className="proom__still-img" src={exhibit.image} alt="" loading="lazy" />
   ) : (
-    <div className="proom__still-glyph">
+    // keyed per exhibit so the line art draws itself again on Prev/Next
+    <div className="proom__still-glyph proom__still-glyph--draw" key={exhibit.id}>
       <ProjectArt art={exhibit.theme.art} seed={exhibit.id} />
     </div>
   );

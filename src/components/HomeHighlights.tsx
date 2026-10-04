@@ -2,10 +2,11 @@ import { exhibits, exhibitSlug } from "@/data/museum";
 import { skills } from "@/data/skills";
 import TransitionLink from "@/components/transitions/TransitionLink";
 
-/** The flagship leads; the other two follow as a quieter list. Each opens its
- *  room in the museum. */
+/** The flagship leads, with the portfolio itself under it; the rest follow
+ *  as a quieter list. Each opens its room in the museum. */
 const LEAD = "Genshin Combat Optimizer";
-const FOLLOW = ["CS Internship Bot", "This site"];
+const UNDER_LEAD = "This site";
+const FOLLOW = ["CS Internship Bot", "Exploding Kittens", "Genshin Lyre Autoplayer"];
 
 const byId = (id: string) => exhibits.find((e) => e.id === id);
 
@@ -21,6 +22,7 @@ const byId = (id: string) => exhibits.find((e) => e.id === id);
 export default function HomeHighlights() {
   const lead = byId(LEAD);
   const follow = FOLLOW.map(byId).filter((e): e is (typeof exhibits)[number] => Boolean(e));
+  const underLead = byId(UNDER_LEAD);
   // tools in active use right now, straight from the Skills data
   const stack = skills.filter((s) => s.current).map((s) => s.name).slice(0, 5);
 
@@ -41,26 +43,50 @@ export default function HomeHighlights() {
       </div>
 
       <div className="hh-work">
-        {lead ? (
-          <TransitionLink href={`/projects?exhibit=${exhibitSlug(lead)}`} className="hh-lead">
-            <h4 className="hh-lead-title">
-              <span className="hh-title-text">{lead.title}</span>
-            </h4>
-            <p className="hh-meta">
-              {lead.year} · {lead.category}
-            </p>
-            <p className="hh-lead-desc">{lead.description}</p>
-            <p className="hh-tech font-mono">{lead.technologies.slice(0, 5).join(" · ")}</p>
-            <span className="hh-open">
-              Step inside <span aria-hidden>→</span>
-            </span>
-          </TransitionLink>
-        ) : null}
+        <div className="hh-main">
+          {lead ? (
+            <TransitionLink href={`/projects?exhibit=${exhibitSlug(lead)}&from=home`} className="hh-lead">
+              <h4 className="hh-lead-title">
+                <span className="hh-title-text">{lead.title}</span>
+              </h4>
+              <p className="hh-meta">
+                {lead.year} · {lead.category}
+              </p>
+              <p className="hh-lead-desc">{lead.description}</p>
+              {/* two of the room's own highlights: the lead's proof, and enough
+                  body that its column matches the list beside it */}
+              <ul className="hh-lead-points">
+                {(lead.technical?.highlights ?? []).slice(0, 2).map((h) => (
+                  <li key={h}>{h}</li>
+                ))}
+              </ul>
+              <p className="hh-tech font-mono">{lead.technologies.slice(0, 5).join(" · ")}</p>
+              <span className="hh-open">
+                Step inside <span aria-hidden>→</span>
+              </span>
+            </TransitionLink>
+          ) : null}
+          {underLead ? (
+            <TransitionLink
+              href={`/projects?exhibit=${exhibitSlug(underLead)}&from=home`}
+              className="hh-item hh-item--under"
+            >
+              <div className="hh-item-head">
+                <h4 className="hh-item-title">
+                  <span className="hh-title-text">{underLead.title}</span>
+                </h4>
+                <span className="hh-item-year font-mono">{underLead.year}</span>
+              </div>
+              <span className="hh-item-desc">{underLead.description}</span>
+              <span className="hh-tech font-mono">{underLead.technologies.slice(0, 4).join(" · ")}</span>
+            </TransitionLink>
+          ) : null}
+        </div>
 
         <ul className="hh-list">
           {follow.map((p) => (
             <li key={p.id}>
-              <TransitionLink href={`/projects?exhibit=${exhibitSlug(p)}`} className="hh-item">
+              <TransitionLink href={`/projects?exhibit=${exhibitSlug(p)}&from=home`} className="hh-item">
                 <div className="hh-item-head">
                   <h4 className="hh-item-title">
                     <span className="hh-title-text">{p.title}</span>
@@ -79,8 +105,25 @@ export default function HomeHighlights() {
         <h3 className="hh-now-label">Currently</h3>
         <div className="hh-now-body">
           <p className="hh-now-text">
-            Building this site in the open and chasing WebGL interactions that
-            reward a second look.
+            Researching and building{" "}
+            <a
+              className="hh-now-link"
+              href="https://studio.knightlab.com/projects/look-again/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Look Again
+            </a>{" "}
+            at Northwestern Knight Lab, and a software engineer on a project team at{" "}
+            <a
+              className="hh-now-link"
+              href="https://nnci.northwestern.edu/major-initiatives/forge.html"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Northwestern Forge
+            </a>
+            . On the side: this site and many other projects, built in the open.
           </p>
           <p className="hh-now-stack">
             <span className="hh-now-stack-label">In use now</span>

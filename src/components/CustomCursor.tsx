@@ -57,6 +57,12 @@ export default function CustomCursor() {
     const onMove = (event: PointerEvent) => {
       mx = event.clientX;
       my = event.clientY;
+      // shown only once the pointer is actually on the page (never parked mid-screen)
+      if (!root.classList.contains("cursor-moved")) {
+        rx = dx = mx;
+        ry = dy = my;
+        root.classList.add("cursor-moved");
+      }
       const target = event.target as Element | null;
       const hoverable = target?.closest(
         "a, button, [role='button'], input, textarea, select, label, [data-cursor-hover]"
@@ -64,19 +70,22 @@ export default function CustomCursor() {
       setExpanded(!!hoverable);
     };
 
-    const onLeave = () => {
-      mx = window.innerWidth * 0.5;
-      my = window.innerHeight * 0.42;
+    // mouseout with no relatedTarget = the pointer actually left the window
+    // (pointerleave on window also fires between elements in some browsers)
+    const onLeave = (event: MouseEvent) => {
+      if (event.relatedTarget) return;
+      root.classList.remove("cursor-moved");
       setExpanded(false);
     };
 
     raf = requestAnimationFrame(tick);
     window.addEventListener("pointermove", onMove, { passive: true });
-    window.addEventListener("pointerleave", onLeave);
+    document.addEventListener("mouseout", onLeave);
 
     return () => {
       window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerleave", onLeave);
+      document.removeEventListener("mouseout", onLeave);
+      root.classList.remove("cursor-moved");
       cancelAnimationFrame(raf);
       root.classList.remove("custom-cursor-active");
     };

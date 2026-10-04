@@ -91,7 +91,7 @@ export async function POST(req: Request) {
 
   // 5. rate limit
   if (rateLimited(clientIp(req)))
-    return bad("Too many messages — give it a minute.", 429);
+    return bad("Too many messages. Give it a minute.", 429);
 
   // 6. send
   const apiKey = process.env.RESEND_API_KEY;

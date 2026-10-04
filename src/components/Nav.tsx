@@ -201,7 +201,7 @@ export default function Nav() {
                     dockLinkRefs.current[id] = node;
                   }}
                   aria-current={isActive(id) ? "page" : undefined}
-                  className="site-dock-link flex min-h-11 min-w-11 items-center justify-center whitespace-nowrap px-1.5 py-2 text-xs leading-tight text-muted"
+                  className="site-dock-link flex min-h-11 min-w-11 items-center justify-center whitespace-nowrap px-1 py-2 text-xs leading-tight text-muted"
                 >
                   <HoverReveal>{l.label}</HoverReveal>
                 </TransitionLink>

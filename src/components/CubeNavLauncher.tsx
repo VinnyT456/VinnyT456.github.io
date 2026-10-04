@@ -56,7 +56,7 @@ const pageLabels: Record<string, string> = {
 const workshopTips = [
   "Double-click the cube to scramble it.",
   "The home cube maps each face to a page.",
-  "This site is the demo — drag the hero cube.",
+  "This site is the demo. Drag the hero cube.",
   "There's a seventh face. Old games know the code.",
   site.tagline.split(".")[0] + ".",
 ] as const;
@@ -553,7 +553,7 @@ export default function CubeNavLauncher() {
           <div className="cube-nav-menu__secret">
             <p className="cube-nav-menu__label text-xs font-medium text-accent">Secret face</p>
             <p className="cube-nav-menu__secret-copy text-xs leading-relaxed text-foreground/85">
-              Seventh side unlocked. The real cube lives on Home — go spin it.
+              Seventh side unlocked. The real cube lives on Home. Go spin it.
             </p>
             <TransitionLink
               href="/"
