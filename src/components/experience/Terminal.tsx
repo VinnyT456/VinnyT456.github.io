@@ -101,7 +101,8 @@ function OutputLine({ line }: { line: Line }) {
     line.tone && line.tone !== "default" && `term__line--${line.tone}`,
     line.mono && "term__line--mono",
     // "  → item" bullets: wrapped lines hang under the text, not the arrow
-    typeof line.text === "string" && /^\s*→ /.test(line.text) && "term__line--hang"
+    typeof line.text === "string" && /^\s*→ /.test(line.text) && "term__line--hang",
+    line.clear && "term__line--clear"
   );
   if (line.image) {
     return (
@@ -686,7 +687,7 @@ export default function Terminal() {
         {/* Click/tap-to-run chips — a browsable way into the shell, plus a plain
             text way out. Hidden while the timeline owns the arrow keys. */}
         {!inTimeline ? (
-          <div className="term__chips" aria-label="Quick commands">
+          <div className="term__chips" role="group" aria-label="Quick commands">
             {QUICK_COMMANDS.map((c) => (
               <button
                 key={c}

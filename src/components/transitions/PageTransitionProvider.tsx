@@ -40,7 +40,9 @@ export default function PageTransitionProvider({
       const path = pathPart || "/";
       if (path === pathname) return;
 
-      if (reduced) {
+      // The museum's city walk is its own way in (and its loader), so it
+      // gets no cover first. A deep link straight into a room still does.
+      if (reduced || (path.split("?")[0] === "/projects" && !href.includes("exhibit="))) {
         router.push(href);
         return;
       }

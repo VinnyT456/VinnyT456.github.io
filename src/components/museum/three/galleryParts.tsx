@@ -1,10 +1,10 @@
 "use client";
 
-import { Suspense, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
-import type { ExhibitType } from "@/data/museum";
+import { demoFiles, type ExhibitType } from "@/data/museum";
 import { CUBE_COLORS } from "@/components/three/cubeColors";
 
 /**
@@ -15,15 +15,6 @@ import { CUBE_COLORS } from "@/components/three/cubeColors";
  */
 export const SPACING = 9; // distance between cases along -Z
 export const HALL_W = 14;
-
-// Exhibits are grouped into halls of HALL_SIZE. When there are more, a threshold
-// (extra gap + an arch) separates one hall from the next, so a large collection
-// reads as walking through several connected halls rather than one endless one.
-export const HALL_SIZE = 6; // 17 exhibits → 6 / 6 / 5, no lonely one-stand hall
-export const HALL_GAP = 7; // extra -Z inserted between halls, on top of SPACING
-
-export const hallOf = (i: number) => Math.floor(i / HALL_SIZE);
-export const isHallStart = (i: number) => i > 0 && i % HALL_SIZE === 0;
 
 // Every case alternates left/right wall down the hall — a zig-zag path, no
 // centred finale. `count` kept for signature compatibility with callers.
@@ -36,16 +27,14 @@ export const caseX = (i: number, count?: number) => {
   // narrow, long cases sit close to the wall with their long side facing the aisle
   return SIDE(i) * (HALL_W / 2 - 1.9);
 };
-// Base -Z including the per-hall gaps accumulated up to this index.
-export const zBase = (i: number) => -(i * SPACING + hallOf(i) * HALL_GAP);
+export const zBase = (i: number) => -i * SPACING;
 export const caseZ = (i: number, count?: number) => {
   void count;
   return zBase(i);
 };
 
 /* --- The hall shell --------------------------------------------------------- */
-// One enclosed hall (the gallery renders a single hall at a time). Walls at both
-// ends box it in so the next hall is never visible from this one.
+// One enclosed hall holding every case, walled in at both ends.
 export function Hall({ count }: { count: number }) {
   const endZ = zBase(count - 1); // most-negative case Z (local layout, no gaps)
   const frontZ = 10; // a little in front of the first case — the entrance wall
@@ -478,6 +467,8 @@ export function Exhibit({
   active,
   interior,
   center = false,
+  video,
+  playing = false,
   onEnter,
 }: {
   index: number;
@@ -490,6 +481,10 @@ export function Exhibit({
   active: boolean;
   interior: number; // 0..1 — how "indoors" we are; gates the accent lights
   center?: boolean; // finale piece: stands in the aisle, no wall alcove
+  /** the project's demo folder: its case gets a screen showing the recording */
+  video?: string;
+  /** this case's screen runs its loop (only the one in focus does) */
+  playing?: boolean;
   onEnter: () => void;
 }) {
   const [hover, setHover] = useState(false);
@@ -531,15 +526,18 @@ export function Exhibit({
       {/* --- Exhibit display: the project data's exhibitType picks the format.
           The museum frame (this group, pedestal, lighting, interaction) is
           constant; only the display inside it changes. --- */}
-      {exhibitType === "interactive_demo" ? (
+      {/* a project with a demo recording always gets the screen case: the
+          demo is the exhibit, whatever kind of project it is */}
+      {exhibitType === "interactive_demo" && !video ? (
         <InteractiveDemoDisplay side={side} center={center} accent={accent} lit={lit} />
-      ) : exhibitType === "physical_artifact" ? (
+      ) : exhibitType === "physical_artifact" && !video ? (
         /* physical_artifact: a 3D object floats over the plinth (also in the hall,
            not just inside the room), shape chosen by theme.art. */
         <HallArtifact art={art} accent={accent} lit={lit} />
       ) : (exhibitType === "holographic_display" ||
           exhibitType === "data_exhibit") &&
-        image ? (
+        image &&
+        !video ? (
         /* holographic_display (+ data/physical fall back here until built) */
         <Suspense fallback={<HoloPlinth accent={accent} lit={lit} />}>
           <HologramSlab src={image} accent={accent} lit={lit} hover={hover} />
@@ -569,20 +567,30 @@ export function Exhibit({
 
           <mesh position={[0, 2.9, 0]}>
             <boxGeometry args={[CASE_W, 3, CASE_D]} />
-            <meshStandardMaterial color={lit ? accent : "#20242e"} transparent opacity={lit ? 0.2 : 0.07} roughness={0.4} />
+            {/* a case with a screen keeps its glass clear, so the demo reads */}
+            <meshStandardMaterial color={lit ? accent : "#20242e"} transparent opacity={video ? (lit ? 0.06 : 0.04) : lit ? 0.2 : 0.07} roughness={0.4} />
           </mesh>
           <lineSegments geometry={glassEdges} position={[0, 2.9, 0]}>
             <lineBasicMaterial color={lit ? accent : "#c9d2e6"} transparent opacity={lit ? 1 : 0.45} />
           </lineSegments>
 
-          <mesh position={[0, 2.9, CASE_D / 2 - 0.03]}>
-            <planeGeometry args={[(center ? CASE_W : CASE_D) - 0.5, 2.5]} />
-            <meshBasicMaterial color={lit ? accent : "#2a2f3b"} transparent opacity={lit ? 0.22 : 0.12} side={THREE.DoubleSide} />
-          </mesh>
-          <mesh position={[0, 2.9, CASE_D / 2 - 0.5]}>
-            <icosahedronGeometry args={[0.62, 0]} />
-            <meshBasicMaterial color={accent} transparent opacity={lit ? 1 : 0.45 * interior + 0.12} wireframe />
-          </mesh>
+          {/* the end panel would cut a strip across a screen: only screenless cases keep it */}
+          {video ? null : (
+            <mesh position={[0, 2.9, CASE_D / 2 - 0.03]}>
+              <planeGeometry args={[(center ? CASE_W : CASE_D) - 0.5, 2.5]} />
+              <meshBasicMaterial color={lit ? accent : "#2a2f3b"} transparent opacity={lit ? 0.22 : 0.12} side={THREE.DoubleSide} />
+            </mesh>
+          )}
+          {video && !center ? (
+            <Suspense fallback={null}>
+              <CaseScreen video={video} side={side} lit={lit} playing={playing} accent={accent} />
+            </Suspense>
+          ) : (
+            <mesh position={[0, 2.9, CASE_D / 2 - 0.5]}>
+              <icosahedronGeometry args={[0.62, 0]} />
+              <meshBasicMaterial color={accent} transparent opacity={lit ? 1 : 0.45 * interior + 0.12} wireframe />
+            </mesh>
+          )}
 
           <mesh position={[0, 0.9, (CASE_D + 0.2) / 2 + 0.01]}>
             <planeGeometry args={[2.2, 0.5]} />
@@ -609,6 +617,85 @@ export function Exhibit({
           </mesh>
         </>
       ) : null}
+    </group>
+  );
+}
+
+/* --- The case screen: a project's demo, playing inside its glass ----------
+ * A 16:9 panel stood inside the case, facing the aisle like a museum monitor.
+ * Every case shows its still; only the case in focus runs its short silent
+ * loop (one video decoding at a time, however long the hall). */
+const SCREEN_W = 4.0;
+const SCREEN_H = SCREEN_W * (9 / 16);
+function CaseScreen({
+  video,
+  side,
+  lit,
+  playing,
+  accent,
+}: {
+  video: string;
+  side: 1 | -1;
+  lit: boolean;
+  playing: boolean;
+  accent: string;
+}) {
+  const f = demoFiles(video);
+  const poster = useTexture(f.poster, (t) => {
+    const arr = Array.isArray(t) ? t : [t];
+    for (const x of arr) x.colorSpace = THREE.SRGBColorSpace;
+  });
+  // the loop's texture, once its first frame is actually up (until then the
+  // still stays, so focus never flashes a black screen)
+  const [live, setLive] = useState<{ src: string; tex: THREE.VideoTexture } | null>(null);
+  useEffect(() => {
+    if (!playing) return;
+    const el = document.createElement("video");
+    el.src = f.loop;
+    el.muted = true;
+    el.loop = true;
+    el.playsInline = true;
+    el.preload = "auto";
+    const tex = new THREE.VideoTexture(el);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    let alive = true;
+    const onPlaying = () => {
+      if (alive) setLive({ src: f.loop, tex });
+    };
+    el.addEventListener("playing", onPlaying, { once: true });
+    el.play().catch(() => {
+      /* autoplay refused: the still stays up */
+    });
+    return () => {
+      alive = false;
+      el.removeEventListener("playing", onPlaying);
+      el.pause();
+      el.removeAttribute("src");
+      el.load();
+      tex.dispose();
+    };
+  }, [playing, f.loop]);
+  const map = playing && live?.src === f.loop ? live.tex : poster;
+
+  const edges = useMemo(
+    () => new THREE.EdgesGeometry(new THREE.PlaneGeometry(SCREEN_W + 0.08, SCREEN_H + 0.08)),
+    []
+  );
+  return (
+    <group position={[side * 0.3, 2.9, 0]} rotation={[0, (-side * Math.PI) / 2, 0]}>
+      {/* bezel, then the picture a hair in front of it */}
+      <mesh position={[0, 0, -0.02]}>
+        <planeGeometry args={[SCREEN_W + 0.08, SCREEN_H + 0.08]} />
+        <meshBasicMaterial color="#05060a" />
+      </mesh>
+      <lineSegments geometry={edges} position={[0, 0, -0.015]}>
+        <lineBasicMaterial color={lit ? accent : "#c9d2e6"} transparent opacity={lit ? 0.9 : 0.35} />
+      </lineSegments>
+      <mesh>
+        <planeGeometry args={[SCREEN_W, SCREEN_H]} />
+        {/* stills not in focus sit dimmed, so the lit case reads as "on" */}
+        <meshBasicMaterial map={map} toneMapped={false} color={lit ? "#ffffff" : "#7d8290"} />
+      </mesh>
     </group>
   );
 }

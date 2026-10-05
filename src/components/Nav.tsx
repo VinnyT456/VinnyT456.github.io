@@ -46,6 +46,20 @@ function measureIndicator(
   };
 }
 
+/** The active-link highlight, in three parts so it can glide between links
+ *  on transforms alone: two end caps slide, the straight middle stretches.
+ *  Animating width would re-lay it out every frame; scaling one piece would
+ *  squash its rounded ends. */
+function PillParts() {
+  return (
+    <>
+      <span className="pill-ind__cap pill-ind__cap--l" />
+      <span className="pill-ind__mid" />
+      <span className="pill-ind__cap pill-ind__cap--r" />
+    </>
+  );
+}
+
 export default function Nav() {
   const pathname = usePathname();
   const reduced = useReducedMotion();
@@ -129,13 +143,17 @@ export default function Nav() {
             >
               <span
                 aria-hidden
-                className="nav-active-indicator"
-                style={{
-                  width: navIndicator.width,
-                  opacity: navIndicator.opacity,
-                  transform: `translate(${navIndicator.left}px, -50%)`,
-                }}
-              />
+                className="nav-active-indicator pill-ind"
+                style={
+                  {
+                    "--x": `${navIndicator.left}px`,
+                    "--w": navIndicator.width,
+                    opacity: navIndicator.opacity,
+                  } as React.CSSProperties
+                }
+              >
+                <PillParts />
+              </span>
               {desktopLinks.map((l, index) => (
                 <li
                   key={l.href}
@@ -184,13 +202,17 @@ export default function Nav() {
         <ul ref={dockListRef} className="site-dock-links">
           <span
             aria-hidden
-            className="site-dock-indicator"
-            style={{
-              width: dockIndicator.width,
-              opacity: dockIndicator.opacity,
-              transform: `translateX(${dockIndicator.left}px)`,
-            }}
-          />
+            className="site-dock-indicator pill-ind"
+            style={
+              {
+                "--x": `${dockIndicator.left}px`,
+                "--w": dockIndicator.width,
+                opacity: dockIndicator.opacity,
+              } as React.CSSProperties
+            }
+          >
+            <PillParts />
+          </span>
           {dockLinks.map((l) => {
             const id = l.id;
             return (

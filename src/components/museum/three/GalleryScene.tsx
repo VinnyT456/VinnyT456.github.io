@@ -1,40 +1,40 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import type { Exhibit as ExhibitData } from "@/data/museum";
+import { exhibits } from "@/data/museum";
 import { useReducedMotion } from "@/lib/media";
 import { Hall, Exhibit, SIDE, caseX, caseZ } from "./galleryParts";
 
 /**
- * The gallery interior, in real Three.js — one hall at a time. It's handed just
- * the current hall's slice of exhibits (`hallExhibits`) plus the global index of
- * its first exhibit (`hallStart`); everything inside is laid out by LOCAL index,
- * so each hall is its own enclosed room starting from the entrance. Scroll
- * (`progress`) walks the camera down this hall; clicking a case enters it.
+ * The gallery interior, in real Three.js: every exhibit in one long hall,
+ * cases alternating walls. Scroll (`progress`) walks the camera down it;
+ * clicking a case enters it.
+ *
+ * While `preload` is on, the canvas sits hidden under the city walk and draws
+ * only on demand: enough to compile its shaders and start its textures. It
+ * reports `onReady` once it has drawn, so the walk can open the doors onto it.
  */
+const N = exhibits.length;
+/** cases this far from the one in focus aren't drawn: past ~72 units the fog
+ *  has already swallowed them */
+const DRAW_RANGE = 8;
+
 export default function GalleryScene({
   progress,
   active,
-  hallExhibits,
-  hallStart,
-  hallKey,
-  landLocal,
-  crossing,
+  preload,
+  onReady,
   onEnter,
 }: {
   progress: React.MutableRefObject<number>;
-  active: number; // GLOBAL active index
-  hallExhibits: ExhibitData[];
-  hallStart: number; // global index of hallExhibits[0]
-  hallKey: number; // changes when the shown hall changes → camera snaps
-  landLocal: number; // local index the camera should snap to on a hall change
-  crossing: React.MutableRefObject<boolean>; // true while a hall swap animates
-  onEnter: (i: number) => void; // receives GLOBAL index
+  active: number;
+  preload: boolean;
+  onReady: () => void;
+  onEnter: (i: number) => void;
 }) {
   const reduced = useReducedMotion();
-  const n = hallExhibits.length;
 
   return (
     <div className="gallery-scene__canvas">
@@ -42,56 +42,69 @@ export default function GalleryScene({
         gl={{ antialias: true, alpha: true }}
         camera={{ fov: 55, near: 0.1, far: 200, position: [0, 2.6, 6] }}
         dpr={[1, 1.75]}
+        frameloop={preload ? "demand" : "always"}
       >
-        <Hall count={n} />
+        <Hall count={N} />
         <fog attach="fog" args={["#0a0b10", 30, 82]} />
         <ambientLight intensity={0.7} color="#c8d0e2" />
         <hemisphereLight args={["#33406a", "#06070c", 0.7]} />
         <directionalLight position={[-6, 14, 8]} intensity={0.6} color="#dfe6ff" />
-        {hallExhibits.map((ex, i) => (
-          <Exhibit
-            key={ex.id}
-            index={i}
-            z={caseZ(i, n)}
-            side={SIDE(i)}
-            accent={ex.theme.accent}
-            image={ex.image}
-            exhibitType={ex.exhibitType}
-            art={ex.theme.art}
-            active={hallStart + i === active}
-            interior={1}
-            center={false}
-            onEnter={() => onEnter(hallStart + i)}
-          />
+        {exhibits.map((ex, i) => (
+          <group key={ex.id} visible={Math.abs(i - active) <= DRAW_RANGE}>
+            <Exhibit
+              index={i}
+              z={caseZ(i, N)}
+              side={SIDE(i)}
+              accent={ex.theme.accent}
+              image={ex.image}
+              exhibitType={ex.exhibitType}
+              art={ex.theme.art}
+              active={i === active}
+              interior={1}
+              center={false}
+              video={ex.video}
+              playing={i === active && !preload && !reduced}
+              onEnter={() => onEnter(i)}
+            />
+          </group>
         ))}
-        <Rig
-          progress={progress}
-          reduced={reduced}
-          n={n}
-          hallKey={hallKey}
-          landLocal={landLocal}
-          crossing={crossing}
-        />
+        <Rig progress={progress} reduced={reduced} landAt={active} />
+        <Ready onReady={onReady} />
       </Canvas>
     </div>
   );
 }
 
+/** Fires once the scene has mounted and drawn a couple of frames. */
+function Ready({ onReady }: { onReady: () => void }) {
+  const { invalidate } = useThree();
+  useEffect(() => {
+    let a = 0;
+    let b = 0;
+    invalidate();
+    a = requestAnimationFrame(() => {
+      invalidate();
+      b = requestAnimationFrame(onReady);
+    });
+    return () => {
+      cancelAnimationFrame(a);
+      cancelAnimationFrame(b);
+    };
+  }, [invalidate, onReady]);
+  return null;
+}
+
 function Rig({
   progress,
   reduced,
-  n,
-  hallKey,
-  landLocal,
-  crossing,
+  landAt,
 }: {
   progress: React.MutableRefObject<number>;
   reduced: boolean;
-  n: number;
-  hallKey: number;
-  landLocal: number;
-  crossing: React.MutableRefObject<boolean>;
+  /** exhibit the camera snaps to on its first frame */
+  landAt: number;
 }) {
+  const n = N;
   const { camera, size } = useThree();
   // Portrait framing: 0 on landscape screens, ~0.5 on a phone. A tall narrow
   // view has a tiny horizontal FOV and the plaque covers its lower half, so we
@@ -103,9 +116,9 @@ function Rig({
   const lookY = 2.6 - portrait * 3.4;
   const pos = useRef(new THREE.Vector3(-caseX(0, n) * 0.14, 2.7, caseZ(0, n) + 5.4));
   const look = useRef(new THREE.Vector3(caseX(0, n), 2.6, caseZ(0, n)));
-  const seenHall = useRef<number | null>(null);
+  const placed = useRef(false);
 
-  // Snap the camera exactly onto exhibit `i` of this hall (no lerp).
+  // Snap the camera exactly onto exhibit `i` (no lerp).
   const snapTo = (i: number) => {
     const j = Math.min(n - 1, Math.max(0, i));
     pos.current.set(-caseX(j, n) * 0.14, camY, caseZ(j, n) + standoffFor() - 0.8);
@@ -115,18 +128,11 @@ function Rig({
   };
 
   useFrame((_, dt) => {
-    // On the first frame, or whenever the hall changes, SNAP straight to the
-    // intended landing exhibit — computed from landLocal, never from a possibly
-    // stale scroll `progress`. This kills the brief lurch toward the wrong stand.
-    if (seenHall.current !== hallKey) {
-      seenHall.current = hallKey;
-      snapTo(landLocal);
-      return; // hold this frame; don't also run the progress-lerp below
-    }
-    // While the hall swap is still animating under the cover, hold the landing
-    // pose — ignore scroll `progress` so no motion leaks through the transition.
-    if (crossing.current) {
-      snapTo(landLocal);
+    // First frame: SNAP straight to the landing exhibit, never lerp from a
+    // possibly stale scroll `progress` (kills a lurch toward the wrong stand).
+    if (!placed.current) {
+      placed.current = true;
+      snapTo(landAt);
       return;
     }
     const p = progress.current * (n - 1);

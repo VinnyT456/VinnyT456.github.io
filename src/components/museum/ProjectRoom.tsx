@@ -1,8 +1,8 @@
 "use client";
 
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
-import type { Exhibit, StationKey } from "@/data/museum";
-import { useCompactRoom, useTabbedRoom } from "@/lib/media";
+import { demoFiles, type Exhibit, type StationKey } from "@/data/museum";
+import { useCompactRoom, useReducedMotion, useTabbedRoom } from "@/lib/media";
 import ProjectArt from "./ProjectArt";
 import DecodeText from "@/components/DecodeText";
 import { Icon } from "@/components/icons";
@@ -57,6 +57,7 @@ export default function ProjectRoom({
   onPrev,
   onNext,
   returnTo,
+  nextTitle,
 }: {
   exhibit: Exhibit;
   index: number;
@@ -66,6 +67,8 @@ export default function ProjectRoom({
   returnTo?: { href: string; label: string } | null;
   onPrev: () => void;
   onNext: () => void;
+  /** the next room's title, so "Next" says where it goes (as the hall does) */
+  nextTitle?: string;
 }) {
   const compact = useCompactRoom();
   // Laptops and up show every section at once; only small / short screens tab.
@@ -76,7 +79,9 @@ export default function ProjectRoom({
     id: exhibit.id,
     s: null,
   });
-  const defaultSection: RoomSection = exhibit.stations.length ? "story" : "overview";
+  // a project with a demo opens on it: the recording is the strongest proof
+  const defaultSection: RoomSection =
+    exhibit.video || !exhibit.stations.length ? "overview" : "story";
   const activeSection: RoomSection =
     sectionState.id === exhibit.id && sectionState.s ? sectionState.s : defaultSection;
   const setActiveSection = (s: RoomSection) => setSectionState({ id: exhibit.id, s });
@@ -131,7 +136,8 @@ export default function ProjectRoom({
         return;
       }
       if (e.key === "Escape") onExit();
-      else if ((e.target as HTMLElement | null)?.closest?.("[role='tablist']")) return;
+      // tabs and the video keep their own arrow keys (roving focus, seeking)
+      else if ((e.target as HTMLElement | null)?.closest?.("[role='tablist'], video")) return;
       else if (e.key === "ArrowRight" && !atEnd) onNext();
       else if (e.key === "ArrowLeft" && !atStart) onPrev();
       else return;
@@ -141,19 +147,30 @@ export default function ProjectRoom({
   );
 
   useEffect(() => {
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
+    // capture phase: Esc still leaves the room from inside the video's own
+    // controls, which can otherwise keep the key to themselves
+    window.addEventListener("keydown", handleKey, true);
+    return () => window.removeEventListener("keydown", handleKey, true);
   }, [handleKey]);
 
   // A column with more below than fits gets data-more, which shows a quiet
-  // "more ↓" cue at its foot (the story/build columns scroll on their own).
+  // "more ↓" cue at its foot (the story/build columns scroll on their own);
+  // one scrolled away from its top gets data-scrolled, which softens that edge.
   const roomRef = useRef<HTMLElement>(null);
   useEffect(() => {
     const root = roomRef.current;
     if (!root) return;
-    const panels = Array.from(root.querySelectorAll<HTMLElement>(".proom__panel"));
-    const update = (el: HTMLElement) =>
-      el.toggleAttribute("data-more", el.scrollHeight - el.scrollTop - el.clientHeight > 6);
+    const panels = Array.from(root.querySelectorAll<HTMLElement>(".proom__panel, .proom__demo"));
+    const update = (el: HTMLElement) => {
+      // measured from the last block, not scrollHeight: a short column's own
+      // padding can overflow by a few px with nothing actually below
+      const last = el.lastElementChild;
+      const foot = el.getBoundingClientRect().bottom - parseFloat(getComputedStyle(el).paddingBottom);
+      // a hidden panel (another tab) measures as zero: never "more"
+      const shown = el.clientHeight > 0;
+      el.toggleAttribute("data-more", shown && !!last && last.getBoundingClientRect().bottom > foot + 4);
+      el.toggleAttribute("data-scrolled", el.scrollTop > 2);
+    };
     const onScroll = (e: Event) => update(e.currentTarget as HTMLElement);
     const ro = new ResizeObserver(() => panels.forEach(update));
     panels.forEach((el) => {
@@ -192,13 +209,16 @@ export default function ProjectRoom({
   const resultsLabel = hasMetrics ? "Results" : "Highlights";
 
   // Tabs (small screens only): roving focus with ←/→, Home/End.
-  // The header (title, glance, CTA) is always on screen, so the tabs are the
-  // reading material first and the exhibit art last.
+  // The header (title, glance, CTA) is always on screen. A demo recording
+  // leads (it's the proof a skimmer came for); without one the reading
+  // material comes first and the exhibit art last.
+  const exhibitTab = { id: "overview" as const, label: exhibit.video ? "Demo" : "Exhibit", panel: "room-stage" };
   const sections: { id: RoomSection; label: string; panel: string }[] = [
+    ...(exhibit.video ? [exhibitTab] : []),
     ...(hasStory ? [{ id: "story" as const, label: "Story", panel: "room-story" }] : []),
     ...(hasResults ? [{ id: "results" as const, label: resultsLabel, panel: "room-tech" }] : []),
     ...(hasBuild ? [{ id: "build" as const, label: "Build", panel: "room-tech" }] : []),
-    { id: "overview", label: "Exhibit", panel: "room-stage" },
+    ...(exhibit.video ? [] : [exhibitTab]),
   ];
   const onTabKey = (e: React.KeyboardEvent<HTMLButtonElement>, i: number) => {
     const last = sections.length - 1;
@@ -238,10 +258,10 @@ export default function ProjectRoom({
       data-room-section={tabbed ? activeSection : undefined}
     >
       {/* ambient themed backdrop — the room reads as this project, low + dim */}
-      {/* when the line-art is already the centerpiece, don't repeat it behind */}
       {/* never show the line-art twice: skip the backdrop whenever the
-          centerpiece itself is the art (no screenshot, or the phone still) */}
-      {glyphOnly || (compact && images.length === 0) ? null : (
+          centerpiece itself is the art (no screenshot, or the phone still),
+          and behind a demo video, which is the exhibit on its own */}
+      {exhibit.video || glyphOnly || (compact && images.length === 0) ? null : (
         <div className="proom__art" aria-hidden>
           <ProjectArt art={exhibit.theme.art} seed={exhibit.id} />
         </div>
@@ -290,12 +310,16 @@ export default function ProjectRoom({
       {/* --- Ways out (top-right): the page you came from, and the museum --- */}
       <div className="proom__exits">
         {returnTo ? (
-          <TransitionLink href={returnTo.href} className="proom__exit">
-            ← Back to {returnTo.label}
+          // the museum is the room's way out; leaving the section altogether
+          // is the quieter, secondary choice
+          <TransitionLink href={returnTo.href} className="proom__exit proom__exit--quiet">
+            Exit to {returnTo.label}
           </TransitionLink>
         ) : null}
-        <button type="button" className="proom__exit" onClick={onExit}>
-          {returnTo ? "Museum" : "← Back to museum"}
+        <button type="button" className="proom__exit" onClick={onExit} aria-keyshortcuts="Escape">
+          ← Museum
+          {/* Esc already leaves the room; say so where pointer people look */}
+          <kbd className="proom__exit-key" aria-hidden>Esc</kbd>
         </button>
       </div>
 
@@ -322,12 +346,18 @@ export default function ProjectRoom({
         </div>
       ) : null}
 
+      {/* The centre column: what the project looks like, then how it runs.
+          A plain pass-through everywhere (display: contents) except a desktop
+          room with a demo video, where it stacks the two flush under the top. */}
+      <div className="proom__centre">
       {/* --- The lit centerpiece on its pedestal ---
           Desktop gets the full R3F exhibit (a floating image that rotates through
           the project's shots, click to view up close); phones get a light still
           so the room stays fast and readable without a WebGL scene to wrangle. */}
       <div className="proom__stage" id="room-stage" data-room-panel="overview">
-        {compact || glyphOnly ? (
+        {exhibit.video ? (
+          <DemoVideo key={exhibit.id} video={exhibit.video} title={exhibit.title} />
+        ) : compact || glyphOnly ? (
           <CompactCenterpiece
             exhibit={exhibit}
             large={!compact}
@@ -388,6 +418,8 @@ export default function ProjectRoom({
           {demo.note ? <p className="proom__demo-note">{demo.note}</p> : null}
         </section>
       ) : null}
+      {hasDemo && demo ? <span className="proom__more proom__more--demo" aria-hidden>more ↓</span> : null}
+      </div>
 
       {/* --- Story panel (left): WHY does this project exist? Reads top to
           bottom: problem → idea → approach → result. --- */}
@@ -495,8 +527,9 @@ export default function ProjectRoom({
           className="proom__nav-btn"
           onClick={onPrev}
           disabled={atStart}
+          aria-label="Previous project"
         >
-          ← Previous
+          ← <span className="proom__nav-prev-word">Previous</span>
         </button>
         <p className="proom__nav-count font-mono">
           <span className="sr-only">
@@ -512,8 +545,21 @@ export default function ProjectRoom({
             Code on GitHub <span aria-hidden>↗</span>
           </a>
         ) : (
-          <button type="button" className="proom__nav-btn" onClick={onNext}>
-            Next →
+          <button
+            type="button"
+            className="proom__nav-btn"
+            onClick={onNext}
+            aria-label={nextTitle ? `Next: ${nextTitle}` : undefined}
+          >
+            {nextTitle ? (
+              <span className="proom__nav-label">
+                <span className="proom__nav-kicker">Next:</span>{" "}
+                <span className="proom__nav-next">{nextTitle}</span>
+              </span>
+            ) : (
+              "Next"
+            )}{" "}
+            →
           </button>
         )}
       </nav>
@@ -649,5 +695,35 @@ function CompactCenterpiece({
       )}
       <span className="proom__still-plinth" aria-hidden />
     </div>
+  );
+}
+
+/** The project's demo recording, in place of the centerpiece. It plays muted
+ *  and on a loop (as a looping exhibit screen would), with the browser's own
+ *  controls for sound, scrubbing and full screen. Reduced motion: it waits on
+ *  its poster until played. */
+function DemoVideo({ video, title }: { video: string; title: string }) {
+  const reduced = useReducedMotion();
+  const f = demoFiles(video);
+  const name = title.replace(/^\[PLACEHOLDER:\s*/, "").replace(/\]$/, "");
+  return (
+    <figure className="proom__video">
+      <video
+        className="proom__video-el"
+        src={f.full}
+        poster={f.poster}
+        muted
+        loop
+        playsInline
+        autoPlay={!reduced}
+        controls
+        preload="metadata"
+        aria-label={`${name} demo video`}
+      />
+      <figcaption className="proom__video-cap font-mono">
+        <span className="proom__video-cap-long">Demo · muted · sound and full screen in the controls</span>
+        <span className="proom__video-cap-short">Demo · muted · tap for sound</span>
+      </figcaption>
+    </figure>
   );
 }

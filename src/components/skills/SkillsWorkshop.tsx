@@ -351,6 +351,11 @@ export default function SkillsWorkshop() {
     flat,
     onFlatChange: setFlat,
     onSelect: (id: string, viaKeyboard: boolean) => {
+      // the open tool again: a toggle, it closes its project list
+      if (picked && id === selected?.id) {
+        setPicked(false);
+        return;
+      }
       if (inline) return selectSkill(id);
       setSelectedId(id);
       setPicked(true);

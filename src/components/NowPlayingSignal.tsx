@@ -6,19 +6,24 @@ import { cn } from "@/lib/utils";
 
 /**
  * A quiet ambient "now playing" chip. No Spotify integration exists in this
- * project, so this rotates a small local playlist (with a playful fallback
- * line) rather than adding OAuth/backend. A tiny CSS equalizer suggests music.
+ * project, so this rotates a small hand-picked local playlist rather than
+ * adding OAuth/backend. A tiny CSS equalizer suggests music.
  *
  * Rotation pauses under reduced-motion, while the tab is hidden, and while the
  * chip is scrolled out of view — ambient motion shouldn't tick next to the
  * headline when no one is watching it.
  */
-const TRACKS = [
-  "Frank Ocean — Pink + White",
-  "SZA — Saturn",
-  "Tame Impala — Let It Happen",
-  "debugging in silence",
-  "somewhere in the queue",
+const TRACKS: [title: string, artist: string][] = [
+  ["La vaguelette", "HOYO-MiX, Cécilia Cara"],
+  ["Only by Chasing the Wind", "Robin, HOYO-MiX, Chevy"],
+  ["Yume To Hazakura", "Wotamin"],
+  ["白月光与朱砂痣", "胖虎"],
+  ["It all fell down（感觉至上）", "胖虎"],
+  ["Blazing Heart (English Version)", "HOYO-MiX, Chrissy Costanza"],
+  ["Two to Tango", "HOYO-MiX, Sān-Z, E1and"],
+  ["tada koe hitotsu", "mihoyana"],
+  ["燈影微暖", "Haze哈泽"],
+  ["Snezhnaya", "HOYO-MiX"],
 ];
 
 export { TRACKS as NOW_PLAYING_TRACKS };
@@ -58,7 +63,8 @@ export default function NowPlayingSignal({
   }, [reduced, pageVisible, inView]);
 
   const active = !reduced && pageVisible && inView;
-  const track = TRACKS[i];
+  const [title, artist] = TRACKS[i];
+  const track = `${title} — ${artist}`;
 
   return (
     <div
@@ -91,12 +97,14 @@ export default function NowPlayingSignal({
         // the label is a desktop nicety; on a phone the track needs the room
         <span className="shrink-0 text-muted/80 max-sm:hidden">soundtrack:</span>
       ) : null}
+      {/* the title always shows whole; only the artist gives way */}
       <span
         suppressHydrationWarning
-        className={cn("truncate text-muted", compact && "max-w-[9.5rem]")}
+        className={cn("flex min-w-0 text-muted", compact && "max-w-[9.5rem]")}
         title={mounted ? track : undefined}
       >
-        {track}
+        <span className={cn(compact ? "truncate" : "shrink-0")}>{title}</span>
+        <span className="truncate text-muted/70">&nbsp;— {artist}</span>
       </span>
     </div>
   );

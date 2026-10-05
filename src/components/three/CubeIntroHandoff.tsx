@@ -306,6 +306,9 @@ export default function CubeIntroHandoff() {
     >
       <Canvas
         className="absolute inset-0"
+        // R3F turns pointer events back on for its own wrapper, which put this
+        // overlay (above the loader) on top of the "Skip intro" button
+        style={{ pointerEvents: "none" }}
         camera={{ position: [3.5, 1.5, CAM_Z], fov: CAM_FOV }}
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true }}

@@ -82,7 +82,16 @@ export type Exhibit = {
   stations: InformationStation[];
   technical?: TechnicalSpec;
   demo?: DemoSpec;
+  /** The project's demo recording: a folder under public/projects/demos made by
+   *  `npm run demos`, holding demo.mp4 (the room), loop.mp4 (its gallery case)
+   *  and poster.webp (the case's still, the room's first frame). */
+  video?: string;
 };
+
+/** The three files of an exhibit's demo recording, from its `video` folder. */
+export function demoFiles(video: string) {
+  return { full: `${video}/demo.mp4`, loop: `${video}/loop.mp4`, poster: `${video}/poster.webp` };
+}
 
 const STATION_LABELS: Record<StationKey, string> = {
   problem: "The Problem",
@@ -126,8 +135,7 @@ function stations(
 // drop them in public/projects, run `npm run images` (→ ≤1200px WebP), and
 // point these paths at the .webp files. They double as 3D textures, so keep
 // them web-sized.
-// The gallery groups exhibits into halls of 6 (see HALL_SIZE), so 17 exhibits
-// walk as three connected rooms (6 / 6 / 5).
+// The gallery walks every exhibit in one hall, in this order.
 
 /** Stable URL slug for an exhibit — used by `/projects?exhibit=<slug>` deep
  *  links, the Skills page, and the About terminal's `projects/<slug>` dirs. */
@@ -144,6 +152,7 @@ const site0 = site.projects[0];
 export const exhibits: Exhibit[] = [
   {
     id: "Genshin Combat Optimizer",
+    video: "/projects/demos/genshin-combat-optimizer",
     title: "Genshin Combat Optimizer",
     year: "2026",
     category: "Web · Simulation",
@@ -184,6 +193,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "This site",
+    video: "/projects/demos/personal_portfolio",
     title: site0?.title ?? "Personal Portfolio",
     year: site0?.year ?? "2026",
     category: "Web · Interactive 3D",
@@ -223,6 +233,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "Genshin Rhythm Autoplayer",
+    video: "/projects/demos/genshin_rhythm_autoplayer",
     title: "Genshin Rhythm Autoplayer",
     year: "2026",
     category: "macOS · Real-time input",
@@ -251,6 +262,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "Genshin Lyre Autoplayer",
+    video: "/projects/demos/genshin_lyre_auto_player",
     title: "Genshin Lyre Autoplayer",
     year: "2026",
     category: "macOS · Native app",
@@ -279,6 +291,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "Finance Job Dashboard",
+    video: "/projects/demos/finance_job_dashboard",
     title: "Finance Job Dashboard",
     year: "2026",
     category: "Web · Full stack · AI",
@@ -307,6 +320,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "CS Internship Bot",
+    video: "/projects/demos/cs_internship_bot",
     title: "CS Internship Bot",
     year: "2026",
     category: "Automation · AI · Backend",
@@ -341,6 +355,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "Exploding Kittens",
+    video: "/projects/demos/exploding_kitten",
     title: "Exploding Kittens",
     year: "2026",
     category: "Java · Software quality",
@@ -381,6 +396,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "Treasure Hunt",
+    video: "/projects/demos/treasure_hunt",
     title: "Treasure Hunt",
     year: "2026",
     category: "Web · Education · Game",
@@ -409,6 +425,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "ChestMNIST Classifier",
+    video: "/projects/demos/chestmnist-multilabel-classifier",
     title: "ChestMNIST Classifier",
     year: "2026",
     category: "Computer vision · ML",
@@ -454,6 +471,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "Paralytica",
+    video: "/projects/demos/paralytica",
     title: "Paralytica",
     year: "2026",
     category: "Web · AI · Hackathon",
@@ -487,6 +505,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "CareCompass",
+    video: "/projects/demos/CareCompass",
     title: "CareCompass",
     year: "2026",
     category: "Web · Hackathon",
@@ -519,6 +538,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "SmartGraph Builder",
+    video: "/projects/demos/SmartGraph_Builder",
     title: "SmartGraph Builder",
     year: "2025",
     category: "Desktop · Data viz",
@@ -546,6 +566,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "CommentGuard",
+    video: "/projects/demos/CommentGuard",
     title: "CommentGuard",
     year: "2025",
     category: "ML · NLP",
@@ -573,6 +594,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "RL Agents",
+    video: "/projects/demos/rl_project",
     title: "RL Agents",
     year: "2025",
     category: "Reinforcement learning",
@@ -607,6 +629,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "15-112 Sudoku",
+    video: "/projects/demos/sudoku",
     title: "15-112 Sudoku",
     year: "2024",
     category: "Python · Game",
@@ -634,6 +657,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "Rubik's Cube Solver",
+    video: "/projects/demos/rubiks_cube_solver",
     title: "Rubik's Cube Solver",
     year: "2024",
     category: "Computer vision · ML",
@@ -661,6 +685,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "SAT Question Bank Toolkit",
+    video: "/projects/demos/sat_crawler",
     title: "SAT Question Bank Toolkit",
     year: "2024",
     category: "Automation · OCR",

@@ -242,7 +242,7 @@ const whoami: Command = {
   summary: "display profile",
   run: () => {
     // right column: the profile text, tone-tagged
-    const info: { text: string; tone?: LineTone }[] = [
+    const info: { text: string; tone?: LineTone; clear?: boolean }[] = [
       { text: site.name, tone: "accent" },
       { text: `${site.headline}.` },
       { text: "" },
@@ -251,18 +251,16 @@ const whoami: Command = {
       {
         text: "I build full-stack apps, machine-learning projects, and the occasional native tool, usually because I want to see if the idea actually works.",
       },
-      { text: "" },
-      { text: "\n\nCurrently:" },
+      // clears the avatar float, so the gap is one line wherever the photo ends
+      { text: "Currently:", clear: true },
       { text: "  → studying computer science at Northwestern" },
       { text: "  → student researcher at Northwestern Knight Lab (Look Again)" },
       { text: "  → software engineer at Northwestern Forge" },
       { text: "  → consulting aide at NU Student Affairs IT" },
       { text: "  → building a Genshin combat sim + an internship bot" },
-      { text: "  → and whatever else won't leave me alone" },
       { text: "" },
       { text: "Recently:" },
       { text: "  → SWE intern at Raiders Marketplace (May–Sept. 2026)" },
-      { text: "  → Hackathon Program Development Intern at Grassroot Academy (Jan–Mar. 2026)" }, 
       { text: "" },
       { text: 'Type "help" to explore, or "ls" to look around.', tone: "muted" },
     ];

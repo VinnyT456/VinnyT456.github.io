@@ -129,17 +129,20 @@ export default function LoaderFrame({
           }`}
         >
           {Array.from({ length: dotCount }, (_, i) => (
-            <span
-              key={i}
-              className="h-1 rounded-full transition-[width,background-color] duration-500"
-              style={{
-                width: i <= activeDot ? "2rem" : "0.75rem",
-                background:
-                  i <= activeDot
-                    ? "var(--accent)"
-                    : "color-mix(in oklab, var(--foreground) 20%, transparent)",
-              }}
-            />
+            // a fixed 2rem slot per step: the bar fills it with a transform,
+            // so nothing around it re-lays out as the steps advance
+            <span key={i} className="block h-1 w-8">
+              <span
+                className="block h-full w-full origin-left rounded-full transition-[transform,background-color] duration-500"
+                style={{
+                  transform: `scaleX(${i <= activeDot ? 1 : 0.375})`,
+                  background:
+                    i <= activeDot
+                      ? "var(--accent)"
+                      : "color-mix(in oklab, var(--foreground) 20%, transparent)",
+                }}
+              />
+            </span>
           ))}
         </div>
       ) : null}

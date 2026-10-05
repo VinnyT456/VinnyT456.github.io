@@ -199,9 +199,9 @@ export default function Hero() {
               ) : routeLabel ? (
                 // what the cube's front face opens, worded for how you're driving it
                 <span className="text-foreground/90">
-                  <span className="cube-hint cube-hint--fine"><span className="text-accent">click</span> → {routeLabel}</span>
-                  <span className="cube-hint cube-hint--coarse"><span className="text-accent">tap</span> → {routeLabel}</span>
-                  <span className="cube-hint cube-hint--keys"><span className="text-accent">enter</span> → {routeLabel}</span>
+                  <span className="cube-hint cube-hint--fine"><span className="text-accent">click</span> the cube → {routeLabel}</span>
+                  <span className="cube-hint cube-hint--coarse"><span className="text-accent">tap</span> the cube → {routeLabel}</span>
+                  <span className="cube-hint cube-hint--keys"><span className="text-accent">enter</span> the cube → {routeLabel}</span>
                 </span>
               ) : (
                 // one instruction line, worded for how you're driving it

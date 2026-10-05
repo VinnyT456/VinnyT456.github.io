@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { usePageTransition } from "@/components/transitions/PageTransitionProvider";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useReducedMotion } from "@/lib/media";
 import City from "./City";
@@ -10,17 +9,28 @@ import Museum, { MUSEUM_Z } from "./Museum";
 /**
  * The approach, in real Three.js: a line-art city and a museum with doors that
  * open as the camera automatically walks in over ~4s, then hands off to the
- * gallery. Plays once per session (ProjectMuseum), is skippable, and reduced-motion jumps
- * straight in.
+ * gallery. It doubles as the page's loader: the gallery warms up hidden behind
+ * it (`ready`), and if it isn't ready yet the camera waits at the doors rather
+ * than walking into an empty hall. Skippable; reduced-motion jumps straight in.
  */
 const WALK_MS = 4000;
 const WALK_END = 0.62; // progress at which the walk finishes and the camera parks
+/** time fraction where the eased walk reaches the doors */
+const DOOR_K = Math.acos(1 - 2 * WALK_END) / Math.PI;
+/** a gallery that never reports ready doesn't hold the doors shut forever */
+const MAX_HOLD_MS = 6000;
 
 export default function MuseumScene({
   onEnter,
+  onStart,
+  ready,
   projectCount,
 }: {
   onEnter: () => void;
+  /** the city has drawn its first frame and the walk is under way */
+  onStart: () => void;
+  /** the gallery behind the doors has drawn and can be shown */
+  ready: boolean;
   projectCount: number;
 }) {
   const reduced = useReducedMotion();
@@ -29,35 +39,50 @@ export default function MuseumScene({
   const [prog, setProg] = useState(0);
   const done = useRef(false);
   const rafId = useRef(0);
-
-  // Arriving through the page transition, the cover is still on screen when
-  // this mounts — hold the walk until it has fully revealed the page, so the
-  // whole 4s plays where the visitor can see it.
-  const { busy: transitioning } = usePageTransition();
-  // ...but never wait forever: a very slow device gets the walk after 8s
-  const [waitedOut, setWaitedOut] = useState(false);
+  // the walk's clock starts on the city's first drawn frame, not on mount,
+  // so a slow first compile can't eat the start of the walk
+  const drawnRef = useRef(false);
+  const readyRef = useRef(ready);
   useEffect(() => {
-    if (!transitioning) return;
-    const t = window.setTimeout(() => setWaitedOut(true), 8000);
-    return () => window.clearTimeout(t);
-  }, [transitioning]);
-  const holding = transitioning && !waitedOut;
+    readyRef.current = ready;
+  }, [ready]);
 
   useEffect(() => {
     if (reduced) {
       onEnter();
       return;
     }
-    if (holding) return;
     let start = 0;
+    let heldSince = 0;
     const tick = (now: number) => {
-      if (!start) start = now;
-      const k = Math.min(1, (now - start) / WALK_MS);
+      if (!drawnRef.current) {
+        rafId.current = requestAnimationFrame(tick);
+        return;
+      }
+      if (!start) {
+        start = now;
+        onStart();
+      }
+      let k = Math.min(1, (now - start) / WALK_MS);
+      // at the doors with the hall still dark: wait there, and slide the
+      // clock along so the walk resumes smoothly from the same spot
+      const waiting = k >= DOOR_K && !readyRef.current && (!heldSince || now - heldSince < MAX_HOLD_MS);
+      if (waiting) {
+        if (!heldSince) heldSince = now;
+        k = DOOR_K;
+        start = now - DOOR_K * WALK_MS;
+      }
       const e = -(Math.cos(Math.PI * k) - 1) / 2; // easeInOutSine — calm, even
       progress.current = e;
       setProg(e);
       setCaption(
-        e < WALK_END ? "After hours in the workshop" : e < 0.82 ? "Come in" : "Step inside"
+        waiting
+          ? "Turning the lights on"
+          : e < WALK_END
+            ? "After hours in the workshop"
+            : e < 0.82
+              ? "Come in"
+              : "Step inside"
       );
       if (k < 1) {
         rafId.current = requestAnimationFrame(tick);
@@ -68,7 +93,7 @@ export default function MuseumScene({
     };
     rafId.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId.current);
-  }, [reduced, onEnter, holding]);
+  }, [reduced, onEnter, onStart]);
 
   if (reduced) return null;
 
@@ -80,7 +105,7 @@ export default function MuseumScene({
           camera={{ fov: 55, near: 0.1, far: 300, position: [0, 3.0, 22] }}
           dpr={[1, 1.75]}
         >
-          <SceneContents progress={progress} />
+          <SceneContents progress={progress} drawnRef={drawnRef} />
         </Canvas>
       </div>
 
@@ -124,7 +149,13 @@ export default function MuseumScene({
   );
 }
 
-function SceneContents({ progress }: { progress: React.MutableRefObject<number> }) {
+function SceneContents({
+  progress,
+  drawnRef,
+}: {
+  progress: React.MutableRefObject<number>;
+  drawnRef: React.MutableRefObject<boolean>;
+}) {
   const { camera } = useThree();
   const doorGlow = useRef(0);
   const [glow, setGlow] = useState(0);
@@ -133,6 +164,7 @@ function SceneContents({ progress }: { progress: React.MutableRefObject<number> 
   // the street from the city, the doors part ahead of it (phase B), and it keeps
   // advancing right through the threshold INTO the museum as the light floods.
   useFrame(() => {
+    drawnRef.current = true;
     const p = progress.current;
     const startZ = 22;
     const doorZ = MUSEUM_Z + 34; // arrive at the facade at WALK_END

@@ -618,7 +618,9 @@ export default function CubeNavLauncher() {
         <button
           type="button"
           aria-expanded={open}
-          aria-controls={menuId}
+          // only while open: the closed menu is aria-hidden, and pointing at a
+          // hidden element is an invalid reference
+          aria-controls={open ? menuId : undefined}
           aria-haspopup="dialog"
           aria-label={
             open

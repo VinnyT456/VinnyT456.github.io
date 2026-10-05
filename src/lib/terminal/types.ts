@@ -47,6 +47,8 @@ export type Line = {
    * the alt/fallback. Used only where an actual asset beats ASCII.
    */
   image?: { src: string; alt: string };
+  /** starts below a floated image (the whoami avatar) instead of beside it */
+  clear?: boolean;
 };
 
 /** A completed command + its output, kept in scrollback. */

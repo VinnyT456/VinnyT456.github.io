@@ -89,7 +89,9 @@ export default function Loader() {
     };
   }, [finish]);
 
-  // Enter / Escape / Space skip the intro while it's up.
+  // Enter / Escape / Space skip the intro while it's up, and so does trying
+  // to scroll: the page is locked, so a wheel or swipe would otherwise do
+  // nothing at all, which reads as the site ignoring you.
   useEffect(() => {
     if (!show || fading) return;
     const onKey = (e: KeyboardEvent) => {
@@ -98,8 +100,27 @@ export default function Loader() {
         skip();
       }
     };
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) > 4) skip();
+    };
+    let touchY: number | null = null;
+    const onTouchStart = (e: TouchEvent) => {
+      touchY = e.touches[0]?.clientY ?? null;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      const y = e.touches[0]?.clientY;
+      if (touchY != null && y != null && Math.abs(y - touchY) > 24) skip();
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("wheel", onWheel, { passive: true });
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+    };
   }, [show, fading, skip]);
 
   function handleTurn(index: number) {
@@ -147,7 +168,7 @@ export default function Loader() {
       srStatus={current ? `${current.label} ${current.sub ?? ""}` : "The cube is solving."}
       action={
         <button type="button" className="loader-skip" onClick={skip}>
-          Skip intro
+          Skip intro <span aria-hidden>→</span>
         </button>
       }
     >
