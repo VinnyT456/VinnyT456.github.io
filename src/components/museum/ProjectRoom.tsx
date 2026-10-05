@@ -160,7 +160,7 @@ export default function ProjectRoom({
   useEffect(() => {
     const root = roomRef.current;
     if (!root) return;
-    const panels = Array.from(root.querySelectorAll<HTMLElement>(".proom__panel, .proom__demo"));
+    const panels = Array.from(root.querySelectorAll<HTMLElement>(".proom__panel"));
     const update = (el: HTMLElement) => {
       // measured from the last block, not scrollHeight: a short column's own
       // padding can overflow by a few px with nothing actually below
@@ -346,9 +346,9 @@ export default function ProjectRoom({
         </div>
       ) : null}
 
-      {/* The centre column: what the project looks like, then how it runs.
-          A plain pass-through everywhere (display: contents) except a desktop
-          room with a demo video, where it stacks the two flush under the top. */}
+      {/* The centre column: the exhibit itself (the demo recording), alone and
+          centred, the same in every room. A plain pass-through (display:
+          contents) except on desktop, where it centres the stage. */}
       <div className="proom__centre">
       {/* --- The lit centerpiece on its pedestal ---
           Desktop gets the full R3F exhibit (a floating image that rotates through
@@ -392,33 +392,6 @@ export default function ProjectRoom({
         )}
       </div>
 
-      {/* --- Demo (centre, under the exhibit): the middle column is only for
-          what the project looks like and how it runs — screens and demo. --- */}
-      {hasDemo && demo ? (
-        <section className="proom__demo" aria-labelledby="room-demo-heading" data-room-panel="overview" tabIndex={0}>
-          <h3 className="proom__demo-h" id="room-demo-heading">How it runs</h3>
-          {demo.flow ? (
-            <ol className="proom__demo-flow">
-              <li>
-                <span className="proom__demo-step">Input</span>
-                <span className="proom__demo-val">{demo.flow.input}</span>
-              </li>
-              <li aria-hidden className="proom__demo-arrow">→</li>
-              <li>
-                <span className="proom__demo-step">Model</span>
-                <span className="proom__demo-val">{demo.flow.model}</span>
-              </li>
-              <li aria-hidden className="proom__demo-arrow">→</li>
-              <li>
-                <span className="proom__demo-step">Output</span>
-                <span className="proom__demo-val">{demo.flow.output}</span>
-              </li>
-            </ol>
-          ) : null}
-          {demo.note ? <p className="proom__demo-note">{demo.note}</p> : null}
-        </section>
-      ) : null}
-      {hasDemo && demo ? <span className="proom__more proom__more--demo" aria-hidden>more ↓</span> : null}
       </div>
 
       {/* --- Story panel (left): WHY does this project exist? Reads top to
@@ -515,6 +488,31 @@ export default function ProjectRoom({
                 </div>
               ))}
             </dl>
+          </div>
+        ) : null}
+
+        {/* how it runs, where a project spells it out: with the build facts,
+            so the centre stays the demo alone in every room */}
+        {hasDemo && demo ? (
+          <div className="proom__tech-block" data-room-block="build">
+            <h4 className="proom__tech-h">How it runs</h4>
+            {demo.flow ? (
+              <dl className="proom__facts">
+                <div className="proom__fact">
+                  <dt>Input</dt>
+                  <dd>{demo.flow.input}</dd>
+                </div>
+                <div className="proom__fact">
+                  <dt>Model</dt>
+                  <dd>{demo.flow.model}</dd>
+                </div>
+                <div className="proom__fact">
+                  <dt>Output</dt>
+                  <dd>{demo.flow.output}</dd>
+                </div>
+              </dl>
+            ) : null}
+            {demo.note ? <p className="proom__tech-note">{demo.note}</p> : null}
           </div>
         ) : null}
       </section>
@@ -720,6 +718,11 @@ function DemoVideo({ video, title }: { video: string; title: string }) {
         preload="metadata"
         aria-label={`${name} demo video`}
       />
+      {/* the exhibit's stand: a neck and a plinth, the hall case in miniature */}
+      <div className="proom__video-stand" aria-hidden>
+        <span className="proom__video-neck" />
+        <span className="proom__video-base" />
+      </div>
       <figcaption className="proom__video-cap font-mono">
         <span className="proom__video-cap-long">Demo · muted · sound and full screen in the controls</span>
         <span className="proom__video-cap-short">Demo · muted · tap for sound</span>

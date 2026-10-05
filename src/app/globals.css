@@ -3225,9 +3225,9 @@ html.kbd-used .gallery-hint__keys { display: flex; }
 }
 
 /* ---------- Project Room — a single project's exhibition room ----------
-   Reusable shell: pedestal centerpiece (R3F) centred, story wall to the left,
-   technical wall to the right, optional demo along the bottom, museum signage
-   and navigation. The room is constant; the project is the content. */
+   Reusable shell: the demo recording centred, story wall to the left,
+   technical wall to the right (with "How it runs" where a project has it),
+   museum signage and navigation. The room is constant; the project is the content. */
 .proom {
   position: absolute;
   inset: 0;
@@ -3265,8 +3265,9 @@ html.kbd-used .gallery-hint__keys { display: flex; }
    letterboxed (never cropped) to whatever room the stage has */
 .proom__video {
   margin: 0; height: 100%; min-height: 0;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
 }
+.proom__video-cap { margin-top: 0.9rem; }
 .proom__video-el {
   display: block; width: 100%; min-height: 0; max-height: calc(100% - 1.6rem);
   aspect-ratio: 16 / 9; object-fit: contain;
@@ -3277,14 +3278,38 @@ html.kbd-used .gallery-hint__keys { display: flex; }
     0 24px 60px -30px color-mix(in oklab, var(--proom-accent) 45%, transparent);
 }
 .proom__video-cap { font-size: var(--text-2xs); color: var(--proom-mute); }
+/* the screen stands on something: a short neck into a low plinth with an
+   accent edge and a soft pool of light under it, like the hall's cases */
+.proom__video-stand {
+  display: flex; flex-direction: column; align-items: center;
+  width: 100%; margin-top: -0.5rem; /* the neck tucks under the frame */
+  pointer-events: none;
+}
+.proom__video-neck {
+  width: clamp(2rem, 6%, 3.25rem); height: clamp(1.1rem, 3vh, 1.75rem);
+  background: linear-gradient(to right, var(--museum-night), color-mix(in oklab, var(--museum-ink) 8%, var(--museum-night)) 45%, var(--museum-night));
+  border-inline: 1px solid color-mix(in oklab, var(--proom-accent) 22%, transparent);
+}
+.proom__video-base {
+  position: relative;
+  width: clamp(9rem, 34%, 17rem); height: 0.7rem;
+  border-radius: 4px 4px 2px 2px; /* rounded.xs top, hairline bottom */
+  background: linear-gradient(to bottom, color-mix(in oklab, var(--museum-ink) 10%, var(--museum-night)), var(--museum-night));
+  border: 1px solid color-mix(in oklab, var(--proom-accent) 30%, transparent);
+  border-top-color: color-mix(in oklab, var(--proom-accent) 70%, transparent);
+}
+.proom__video-base::after {
+  content: ""; position: absolute; left: 50%; top: 100%;
+  width: 160%; height: 1.4rem; transform: translateX(-50%);
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--proom-accent) 16%, transparent), transparent);
+}
 .proom__video-cap-short { display: none; }
 @media (max-width: 640px) {
   .proom__video-cap-long { display: none; }
   .proom__video-cap-short { display: inline; }
 }
-/* the centre column wrapper only takes over in a desktop room with a demo:
-   video, caption and "How it runs" stack flush from the title's top line,
-   the leftover room falls below them instead of opening a band between */
+/* the centre column wrapper only takes over on desktop: the demo recording
+   alone, centred between the header line and the pager in every room */
 .proom__centre { display: contents; }
 @media (min-width: 1200px) and (min-height: 760px) {
   .proom:has(.proom__video) {
@@ -3296,14 +3321,12 @@ html.kbd-used .gallery-hint__keys { display: flex; }
   }
   .proom:has(.proom__video) .proom__centre {
     grid-area: centre;
-    display: flex; flex-direction: column; justify-content: flex-start;
-    gap: clamp(1rem, 2.6vh, 1.75rem);
-    min-height: 0; padding-top: 0.6rem;
+    display: flex; flex-direction: column; justify-content: center;
+    min-height: 0;
   }
   .proom:has(.proom__video) .proom__stage { height: auto; flex: 0 0 auto; }
   .proom:has(.proom__video) .proom__video { height: auto; }
-  .proom:has(.proom__video) .proom__video-el { max-height: 56vh; }
-  .proom:has(.proom__video) .proom__more--demo { display: none; }
+  .proom:has(.proom__video) .proom__video-el { max-height: 58vh; }
 }
 /* DOM click target over the floating image (the R3F mesh raycast is unreliable
    through the animated wrapper, so the DOM owns the click). Sits over the upper
@@ -3354,29 +3377,6 @@ html.kbd-used .gallery-hint__keys { display: flex; }
 .proom__glance-item--stack dd { color: color-mix(in oklab, var(--proom-ink) 85%, transparent); }
 .proom__glance-more { color: var(--proom-mute); }
 }
-.proom__demo-note { margin-top: 0.5rem; font-size: var(--text-sm); line-height: 1.5; color: var(--proom-mute); }
-/* how the demo runs — lives under the exhibit in the centre column */
-.proom__demo {
-  grid-area: demo;
-  justify-self: center;
-  width: min(100%, 40rem);
-  padding-top: 0.25rem;
-  text-align: center;
-}
-.proom__demo-h { font-size: var(--text-xs); font-weight: 500; color: var(--proom-mute); margin-bottom: 0.55rem; }
-.proom__demo-flow {
-  list-style: none; margin: 0; padding: 0;
-  display: flex; flex-wrap: wrap; align-items: stretch; justify-content: center; gap: 0.5rem;
-}
-.proom__demo-flow > li:not(.proom__demo-arrow) {
-  display: flex; flex-direction: column; gap: 0.15rem;
-  min-width: 7.5rem; padding: 0.55rem 0.9rem;
-  border: 1px solid var(--proom-line); border-radius: var(--radius-lg);
-  background: color-mix(in oklab, var(--museum-night) 55%, transparent);
-}
-.proom__demo-step { font-size: var(--text-2xs); color: var(--proom-mute); }
-.proom__demo-val { font-size: var(--text-sm); color: var(--proom-ink); }
-.proom__demo-arrow { align-self: center; color: var(--proom-accent); }
 
 /* the room's way(s) out: back to the page you came from (when you arrived
    from Skills, Home or the résumé) and back to the museum */
@@ -3418,8 +3418,8 @@ html.kbd-used .gallery-hint__keys { display: flex; }
 /* --- Story / technical wall panels --- */
 /* Scrolling panels are keyboard-reachable (tabIndex 0) so their overflow can
    be read without a mouse; the ring shows only for keyboard focus. */
-.proom__panel:focus-visible,
-.proom__demo:focus-visible {
+.proom__tech-note { margin-top: 0.5rem; font-size: var(--text-sm); line-height: 1.5; color: var(--proom-mute); }
+.proom__panel:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 4px;
   border-radius: var(--radius-sm);
@@ -3566,12 +3566,12 @@ html.kbd-used .gallery-hint__keys { display: flex; }
   grid-template-columns: minmax(17rem, 24vw) minmax(0, 1fr) minmax(16rem, 23vw);
   grid-template-rows: auto minmax(0, 1fr) auto auto;
   /* one job per column — left: what it is (label, then its story); centre:
-     what it looks like (screens / exhibit, then how the demo runs); right:
-     what it proved and how it's built */
+     what it looks like (the demo); right: what it proved, how it's built and
+     how it runs */
   grid-template-areas:
     "plaque stage tech"
     "story  stage tech"
-    "story  demo  tech"
+    "story  stage tech"
     "nav    nav   nav";
   column-gap: clamp(1.25rem, 2.5vw, 2.5rem);
   row-gap: clamp(0.65rem, 1.8vh, 1.2rem);
@@ -3596,7 +3596,7 @@ html.kbd-used .gallery-hint__keys { display: flex; }
 /* only while there's more below: the foot fades out completely, leaving a
    clear strip for the "more" cue so it never sits on top of a line of text.
    At the end (no data-more) the mask lifts and the last line reads whole. */
-.proom__panel[data-more], .proom__demo[data-more] {
+.proom__panel[data-more] {
   --fade-foot: linear-gradient(to bottom, black calc(100% - 4.5rem), transparent calc(100% - 1.9rem));
   -webkit-mask-image: var(--fade-foot);
   mask-image: var(--fade-foot);
@@ -3627,8 +3627,7 @@ html.kbd-used .gallery-hint__keys { display: flex; }
     font-family: var(--font-mono), monospace; font-size: var(--text-2xs); color: var(--proom-ink);
     pointer-events: none; opacity: 0; transition: opacity 0.2s var(--ease-out);
   }
-  .proom__panel[data-more] + .proom__more,
-  .proom__demo[data-more] + .proom__more { opacity: 1; }
+  .proom__panel[data-more] + .proom__more { opacity: 1; }
   /* the tab already names the section: its in-panel heading stays for screen
      readers only, and a lone results block drops its repeat label */
   .proom__panel-kicker {
@@ -3669,9 +3668,7 @@ html.kbd-used .gallery-hint__keys { display: flex; }
   }
   .proom__more--story { grid-area: story; }
   .proom__more--tech { grid-area: tech; }
-  .proom__more--demo { grid-area: demo; }
-  .proom__panel[data-more] + .proom__more,
-  .proom__demo[data-more] + .proom__more { opacity: 1; }
+  .proom__panel[data-more] + .proom__more { opacity: 1; }
 }
 .proom__panel--story { grid-area: story; }
 .proom__panel--tech { grid-area: tech; }
@@ -3763,14 +3760,6 @@ html.kbd-used .gallery-hint__keys { display: flex; }
     max-height: 100%;
   }
   .proom[data-room-section="overview"] .proom__panel { display: none; }
-  .proom__demo { grid-area: panel; align-self: stretch; min-height: 0; overflow-y: auto; }
-  /* one compact row: input → model → output always reads left to right */
-  .proom__demo-flow { flex-wrap: nowrap; gap: 0.3rem; }
-  .proom__demo-flow > li:not(.proom__demo-arrow) { flex: 1 1 0; min-width: 0; padding: 0.45rem 0.5rem; }
-  .proom__demo-val { font-size: var(--text-xs); }
-  .proom[data-room-section="story"] .proom__demo,
-  .proom[data-room-section="build"] .proom__demo,
-  .proom[data-room-section="results"] .proom__demo { display: none; }
   .proom[data-room-section="story"] .proom__panel--tech,
   .proom[data-room-section="build"] .proom__panel--story,
   .proom[data-room-section="results"] .proom__panel--story { display: none; }

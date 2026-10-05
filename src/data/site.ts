@@ -52,7 +52,7 @@ export const site = {
       "CS student at Northwestern building across the stack: interfaces, APIs, ML, and the occasional WebGL experiment. Seeking software engineering internships.",
     // Public résumé. Drop the graduation-date-free PDF in /public and set e.g.
     // pdf: "/resume.pdf" — View/Download activate automatically once set.
-    pdf: "/resume/Vincent_Resume.pdf",
+    pdf: "/resume/Vincent_Tang_Resume.pdf",
     // "Updated" stamp shown on the page — a maintenance date, NOT a grad date.
     updated: "August 2026",
     // Public education: institution + degree only. No graduation date/year by

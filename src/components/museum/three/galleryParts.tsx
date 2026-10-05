@@ -457,6 +457,25 @@ function HallSudoku({ accent, lit }: { accent: string; lit: boolean }) {
 }
 
 /* --- A single 3D display case ---------------------------------------------- */
+/* One shared soft-falloff texture (white centre → clear edge) for the floor's
+   contact shadow and light pool: radial gradients have no hard polygon edge. */
+let softDisc: THREE.CanvasTexture | null = null;
+function getSoftDisc() {
+  if (softDisc || typeof document === "undefined") return softDisc;
+  const c = document.createElement("canvas");
+  c.width = c.height = 128;
+  const g = c.getContext("2d");
+  if (!g) return null;
+  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grad.addColorStop(0, "rgba(255,255,255,1)");
+  grad.addColorStop(0.55, "rgba(255,255,255,0.45)");
+  grad.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 128, 128);
+  softDisc = new THREE.CanvasTexture(c);
+  return softDisc;
+}
+
 export function Exhibit({
   z,
   side,
@@ -467,6 +486,8 @@ export function Exhibit({
   active,
   interior,
   center = false,
+  title = "",
+  meta = "",
   video,
   playing = false,
   onEnter,
@@ -483,6 +504,9 @@ export function Exhibit({
   center?: boolean; // finale piece: stands in the aisle, no wall alcove
   /** the project's demo folder: its case gets a screen showing the recording */
   video?: string;
+  /** engraved on the plinth's plate */
+  title?: string;
+  meta?: string;
   /** this case's screen runs its loop (only the one in focus does) */
   playing?: boolean;
   onEnter: () => void;
@@ -501,10 +525,21 @@ export function Exhibit({
     () => new THREE.EdgesGeometry(new THREE.BoxGeometry(CASE_W, 3, CASE_D)),
     [CASE_W, CASE_D]
   );
+  // the plinth: a toe recessed at the floor, the body, and a lip at the top
+  const BODY_H = 1.2; // 0.16 → 1.36
   const plinthEdges = useMemo(
-    () => new THREE.EdgesGeometry(new THREE.BoxGeometry(PLINTH_W, 1.4, CASE_D + 0.2)),
+    () => new THREE.EdgesGeometry(new THREE.BoxGeometry(PLINTH_W, BODY_H, CASE_D + 0.2)),
     [PLINTH_W, CASE_D]
   );
+  const lipEdges = useMemo(
+    () => new THREE.EdgesGeometry(new THREE.BoxGeometry(PLINTH_W + 0.12, 0.05, CASE_D + 0.32)),
+    [PLINTH_W, CASE_D]
+  );
+  const glassTop = useMemo(
+    () => new THREE.EdgesGeometry(new THREE.PlaneGeometry(CASE_W, CASE_D)),
+    [CASE_W, CASE_D]
+  );
+  const soft = getSoftDisc();
 
   return (
     <group
@@ -550,19 +585,39 @@ export function Exhibit({
               <planeGeometry args={[5.5, 7]} />
               <meshBasicMaterial color={accent} transparent opacity={lit ? 0.12 : 0.04} />
             </mesh>
-          ) : (
+          ) : video ? null : (
             <mesh position={[side * 0.9, 3, 0]} rotation={[0, (-side * Math.PI) / 2, 0]}>
               <planeGeometry args={[4, 6]} />
               <meshBasicMaterial color={accent} transparent opacity={lit ? 0.1 : 0.03} />
             </mesh>
           )}
 
-          <mesh position={[0, 0.7, 0]}>
-            <boxGeometry args={[PLINTH_W, 1.4, CASE_D + 0.2]} />
+          {/* contact shadow: the case sits on the floor, softly */}
+          {soft ? (
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 0]}>
+              <planeGeometry args={[PLINTH_W + 1.6, CASE_D + 1.8]} />
+              <meshBasicMaterial map={soft} color="#000000" transparent opacity={0.55} depthWrite={false} />
+            </mesh>
+          ) : null}
+          {/* toe: recessed band at the floor, so the plinth reads as standing */}
+          <mesh position={[0, 0.08, 0]}>
+            <boxGeometry args={[PLINTH_W - 0.18, 0.16, CASE_D + 0.02]} />
+            <meshStandardMaterial color="#0b0d13" roughness={1} />
+          </mesh>
+          <mesh position={[0, 0.16 + BODY_H / 2, 0]}>
+            <boxGeometry args={[PLINTH_W, BODY_H, CASE_D + 0.2]} />
             <meshStandardMaterial color="#181c26" roughness={0.9} />
           </mesh>
-          <lineSegments geometry={plinthEdges} position={[0, 0.7, 0]}>
+          <lineSegments geometry={plinthEdges} position={[0, 0.16 + BODY_H / 2, 0]}>
             <lineBasicMaterial color="#c9d2e6" transparent opacity={0.3} />
+          </lineSegments>
+          {/* lip: a slightly wider cap the glass sits on */}
+          <mesh position={[0, 1.385, 0]}>
+            <boxGeometry args={[PLINTH_W + 0.12, 0.05, CASE_D + 0.32]} />
+            <meshStandardMaterial color="#202531" roughness={0.6} />
+          </mesh>
+          <lineSegments geometry={lipEdges} position={[0, 1.385, 0]}>
+            <lineBasicMaterial color={lit ? accent : "#c9d2e6"} transparent opacity={lit ? 0.85 : 0.35} />
           </lineSegments>
 
           <mesh position={[0, 2.9, 0]}>
@@ -572,6 +627,10 @@ export function Exhibit({
           </mesh>
           <lineSegments geometry={glassEdges} position={[0, 2.9, 0]}>
             <lineBasicMaterial color={lit ? accent : "#c9d2e6"} transparent opacity={lit ? 1 : 0.45} />
+          </lineSegments>
+          {/* the glass's top rim catches the light a little more than its sides */}
+          <lineSegments geometry={glassTop} position={[0, 4.401, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <lineBasicMaterial color="#eef2ff" transparent opacity={lit ? 0.9 : 0.5} />
           </lineSegments>
 
           {/* the end panel would cut a strip across a screen: only screenless cases keep it */}
@@ -592,10 +651,14 @@ export function Exhibit({
             </mesh>
           )}
 
-          <mesh position={[0, 0.9, (CASE_D + 0.2) / 2 + 0.01]}>
-            <planeGeometry args={[2.2, 0.5]} />
-            <meshBasicMaterial color="#c9d2e6" transparent opacity={lit ? 0.22 : 0.1} />
-          </mesh>
+          {/* the plinth's engraved plate: what's in the case, as in a museum.
+              On the aisle side, facing the same way as the screen above it. */}
+          <group
+            position={center ? [0, 0.82, (CASE_D + 0.2) / 2 + 0.012] : [-side * (PLINTH_W / 2 + 0.012), 0.82, 0]}
+            rotation={center ? [0, 0, 0] : [0, (-side * Math.PI) / 2, 0]}
+          >
+            <Plaque title={title} meta={meta} accent={accent} lit={lit} />
+          </group>
         </>
       )}
 
@@ -611,9 +674,24 @@ export function Exhibit({
             color="#eef2ff"
             target-position={[0, 0, 0]}
           />
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
-            <circleGeometry args={[2.6, 24]} />
-            <meshBasicMaterial color={accent} transparent opacity={0.08} />
+          {/* a soft pool of the room's colour on the floor (no hard edge) */}
+          {soft ? (
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+              <planeGeometry args={[6.4, 7.6]} />
+              <meshBasicMaterial map={soft} color={accent} transparent opacity={0.16} depthWrite={false} />
+            </mesh>
+          ) : null}
+          {/* the light that's on this case: a faint cone from the ceiling */}
+          <mesh position={[0, 6.6, 0]}>
+            <coneGeometry args={[2.3, 4.4, 40, 1, true]} />
+            <meshBasicMaterial
+              color="#eef2ff"
+              transparent
+              opacity={0.022}
+              side={THREE.DoubleSide}
+              depthWrite={false}
+              blending={THREE.AdditiveBlending}
+            />
           </mesh>
         </>
       ) : null}
@@ -691,11 +769,104 @@ function CaseScreen({
       <lineSegments geometry={edges} position={[0, 0, -0.015]}>
         <lineBasicMaterial color={lit ? accent : "#c9d2e6"} transparent opacity={lit ? 0.9 : 0.35} />
       </lineSegments>
+      {/* the screen's stand: a neck from the bezel down to a low base on the
+          plinth, the same build as the room's stand */}
+      <mesh position={[0, -SCREEN_H / 2 - 0.19, -0.08]}>
+        <boxGeometry args={[0.26, 0.42, 0.1]} />
+        <meshStandardMaterial color="#141822" roughness={0.7} />
+      </mesh>
+      <mesh position={[0, -1.47, -0.08]}>
+        <boxGeometry args={[1.3, 0.06, 0.55]} />
+        <meshStandardMaterial color="#1a1f2a" roughness={0.6} />
+      </mesh>
+      <mesh position={[0, -1.437, 0.196]}>
+        <planeGeometry args={[1.3, 0.01]} />
+        <meshBasicMaterial color={lit ? accent : "#c9d2e6"} transparent opacity={lit ? 0.9 : 0.3} toneMapped={false} />
+      </mesh>
       <mesh>
         <planeGeometry args={[SCREEN_W, SCREEN_H]} />
         {/* stills not in focus sit dimmed, so the lit case reads as "on" */}
         <meshBasicMaterial map={map} toneMapped={false} color={lit ? "#ffffff" : "#7d8290"} />
       </mesh>
     </group>
+  );
+}
+
+/* --- The plinth plate: the exhibit's title and year, engraved -------------
+ * Drawn once per project into a canvas texture with the site's own fonts
+ * (Geist for the name, Geist Mono for the line under it), after they've
+ * loaded. A thin accent rule above it lights with the case. */
+const PLATE_W = 2.6;
+const PLATE_H = 0.62;
+function readFont(varName: string, fallback: string) {
+  const v = getComputedStyle(document.body).getPropertyValue(varName).trim();
+  return v || fallback;
+}
+function Plaque({ title, meta, accent, lit }: { title: string; meta: string; accent: string; lit: boolean }) {
+  const [tex, setTex] = useState<THREE.CanvasTexture | null>(null);
+  useEffect(() => {
+    let alive = true;
+    let made: THREE.CanvasTexture | null = null;
+    document.fonts.ready.then(() => {
+      if (!alive) return;
+      const W = 1040;
+      const H = Math.round((W * PLATE_H) / PLATE_W);
+      const c = document.createElement("canvas");
+      c.width = W;
+      c.height = H;
+      const g = c.getContext("2d");
+      if (!g) return;
+      // brushed-dark plate with a hairline border
+      g.fillStyle = "#0e1118";
+      g.fillRect(0, 0, W, H);
+      g.strokeStyle = "rgba(201, 210, 230, 0.28)";
+      g.lineWidth = 3;
+      g.strokeRect(6, 6, W - 12, H - 12);
+      const sans = readFont("--font-geist-sans", "system-ui, sans-serif");
+      const mono = readFont("--font-geist-mono", "ui-monospace, monospace");
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillStyle = "#e9ecf5";
+      let size = 76;
+      g.font = `600 ${size}px ${sans}`;
+      while (g.measureText(title).width > W - 120 && size > 40) {
+        size -= 4;
+        g.font = `600 ${size}px ${sans}`;
+      }
+      g.fillText(title, W / 2, H * 0.42);
+      g.fillStyle = "rgba(201, 210, 230, 0.62)";
+      g.font = `400 34px ${mono}`;
+      g.fillText(meta.toUpperCase(), W / 2, H * 0.76);
+      made = new THREE.CanvasTexture(c);
+      made.colorSpace = THREE.SRGBColorSpace;
+      made.anisotropy = 4;
+      setTex(made);
+    });
+    return () => {
+      alive = false;
+      made?.dispose();
+    };
+  }, [title, meta]);
+
+  if (!title) return null;
+  return (
+    <>
+      <mesh>
+        <planeGeometry args={[PLATE_W, PLATE_H]} />
+        {/* keyed: three builds a material's shader once, so one made before
+            the texture existed would never pick the texture up */}
+        <meshBasicMaterial
+          key={tex ? "engraved" : "blank"}
+          map={tex}
+          color={tex ? (lit ? "#ffffff" : "#8a8f9c") : "#1a1e28"}
+          toneMapped={false}
+        />
+      </mesh>
+      {/* the rule above the plate: accent when the case is in focus */}
+      <mesh position={[0, PLATE_H / 2 + 0.06, 0.001]}>
+        <planeGeometry args={[PLATE_W * 0.42, 0.018]} />
+        <meshBasicMaterial color={accent} transparent opacity={lit ? 0.95 : 0.25} toneMapped={false} />
+      </mesh>
+    </>
   );
 }

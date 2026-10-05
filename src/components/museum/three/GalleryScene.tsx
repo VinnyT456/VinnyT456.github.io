@@ -63,6 +63,8 @@ export default function GalleryScene({
               interior={1}
               center={false}
               video={ex.video}
+              title={ex.title}
+              meta={`${ex.year} · ${ex.category}`}
               playing={i === active && !preload && !reduced}
               onEnter={() => onEnter(i)}
             />
