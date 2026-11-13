@@ -1,16 +1,21 @@
 "use client";
 
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
-import { demoFiles, type Exhibit, type StationKey } from "@/data/museum";
+import { demoFiles, exhibitSlug, type Exhibit, type StationKey } from "@/data/museum";
 import { useCompactRoom, useReducedMotion, useTabbedRoom } from "@/lib/media";
 import ProjectArt from "./ProjectArt";
 import DecodeText from "@/components/DecodeText";
 import { Icon } from "@/components/icons";
 import { site } from "@/data/site";
+import { VisitorBookLabel } from "./VisitorBook";
+import { STAR_FLOOR, type RepoStats } from "@/lib/repos";
+import { timeAgo } from "@/lib/time";
 import TransitionLink from "@/components/transitions/TransitionLink";
 
 // The centerpiece is the only heavy (R3F/WebGL) part of the room; load it lazily
 // so entering a project doesn't block on the 3D bundle.
+import PokeRow from "@/components/PokeRow";
+import { roomPokes } from "@/data/pokes";
 const RoomCenterpiece = lazy(() => import("./three/RoomCenterpiece"));
 
 /**
@@ -58,6 +63,8 @@ export default function ProjectRoom({
   onNext,
   returnTo,
   nextTitle,
+  onOpenBook,
+  repo,
 }: {
   exhibit: Exhibit;
   index: number;
@@ -69,6 +76,10 @@ export default function ProjectRoom({
   onNext: () => void;
   /** the next room's title, so "Next" says where it goes (as the hall does) */
   nextTitle?: string;
+  /** opens the museum's visitor book (owned by ProjectMuseum) */
+  onOpenBook?: () => void;
+  /** live numbers for the project's public repo, when the API has them */
+  repo?: RepoStats;
 }) {
   const compact = useCompactRoom();
   // Laptops and up show every section at once; only small / short screens tab.
@@ -135,6 +146,8 @@ export default function ProjectRoom({
         e.preventDefault();
         return;
       }
+      // a dialog over the room (the visitor book) owns its own keys
+      if ((e.target as HTMLElement | null)?.closest?.("dialog")) return;
       if (e.key === "Escape") onExit();
       // tabs and the video keep their own arrow keys (roving focus, seeking)
       else if ((e.target as HTMLElement | null)?.closest?.("[role='tablist'], video")) return;
@@ -250,7 +263,7 @@ export default function ProjectRoom({
     <section
       ref={roomRef}
       className="proom"
-      style={{ ["--proom-accent" as string]: exhibit.theme.accent }}
+      style={{ ["--proom-accent-raw" as string]: exhibit.theme.accent }}
       role="dialog"
       aria-modal="true"
       aria-label={`${exhibit.title} — project exhibit`}
@@ -305,10 +318,26 @@ export default function ProjectRoom({
             {cta.label} <span aria-hidden>↗</span>
           </a>
         ) : null}
+        {/* curios: keyed by room, so a new room starts with nothing pressed */}
+        <PokeRow key={exhibit.id} pokes={roomPokes(exhibit)} className="proom__pokes" />
       </header>
 
       {/* --- Ways out (top-right): the page you came from, and the museum --- */}
       <div className="proom__exits">
+        {onOpenBook ? (
+          <button
+            type="button"
+            className="proom__exit proom__exit--quiet"
+            onClick={onOpenBook}
+            aria-haspopup="dialog"
+          >
+            <VisitorBookLabel />
+          </button>
+        ) : null}
+        {/* the same project, as a building on the island: the world opens with the walker at its door */}
+        <TransitionLink href={`/?island=${exhibitSlug(exhibit)}`} className="proom__exit proom__exit--quiet">
+          See it on the island
+        </TransitionLink>
         {returnTo ? (
           // the museum is the room's way out; leaving the section altogether
           // is the quieter, secondary choice
@@ -404,7 +433,7 @@ export default function ProjectRoom({
         {...(tabbed ? { role: "tabpanel" } : {})}
         data-room-panel="story"
       >
-        <h3 className="proom__panel-kicker" id="room-story-heading">The story</h3>
+        <h2 className="proom__panel-kicker" id="room-story-heading">The story</h2>
         <dl className="proom__story">
           {STORY_ORDER.map(({ key, label }) => {
             const body = stationBody(key);
@@ -431,7 +460,7 @@ export default function ProjectRoom({
         tabIndex={0}
         {...(tabbed ? { role: "tabpanel" } : {})}
       >
-        <h3 className="proom__panel-kicker" id="room-tech-heading">
+        <h2 className="proom__panel-kicker" id="room-tech-heading">
           {tabbed && activeSection === "results"
             ? resultsLabel
             : tabbed && activeSection === "build"
@@ -439,11 +468,11 @@ export default function ProjectRoom({
               : hasResults
                 ? `${resultsLabel} & build`
                 : "Build"}
-        </h3>
+        </h2>
 
         {tech?.metrics?.length ? (
           <div className="proom__tech-block" data-room-block="results">
-            <h4 className="proom__tech-h">Measured results</h4>
+            <h3 className="proom__tech-h">Measured results</h3>
             <dl className="proom__metrics">
               {tech.metrics.map((m, i) => (
                 <div key={`m-${i}`} className="proom__metric">
@@ -457,7 +486,7 @@ export default function ProjectRoom({
 
         {tech?.highlights?.length ? (
           <div className="proom__tech-block" data-room-block="results">
-            <h4 className="proom__tech-h">Highlights</h4>
+            <h3 className="proom__tech-h">Highlights</h3>
             <ul className="proom__highlights">
               {tech.highlights.map((h, i) => (
                 <li key={`hl-${i}`}>{h}</li>
@@ -467,7 +496,7 @@ export default function ProjectRoom({
         ) : null}
 
         <div className="proom__tech-block" data-room-block="build">
-          <h4 className="proom__tech-h">Stack</h4>
+          <h3 className="proom__tech-h">Stack</h3>
           <ul className="proom__chips">
             {exhibit.technologies.map((t, i) => (
               <li key={`${exhibit.id}-tech-${i}`}>
@@ -477,9 +506,39 @@ export default function ProjectRoom({
           </ul>
         </div>
 
+        {repo ? (
+          <div className="proom__tech-block" data-room-block="build">
+            <h3 className="proom__tech-h">Repository</h3>
+            <dl className="proom__facts">
+              <div className="proom__fact">
+                <dt>Code</dt>
+                <dd>
+                  <a className="proom__repo-link" href={repo.url} target="_blank" rel="noopener noreferrer">
+                    {repo.name} <span aria-hidden>↗</span>
+                    <span className="sr-only"> (opens GitHub in a new tab)</span>
+                  </a>
+                </dd>
+              </div>
+              <div className="proom__fact">
+                <dt>Activity</dt>
+                <dd>
+                  {repo.commits ? `${repo.commits.toLocaleString("en")} commits · ` : ""}last push{" "}
+                  {timeAgo(repo.pushedAt)}
+                </dd>
+              </div>
+              {repo.stars >= STAR_FLOOR ? (
+                <div className="proom__fact">
+                  <dt>Stars</dt>
+                  <dd>{repo.stars.toLocaleString("en")}</dd>
+                </div>
+              ) : null}
+            </dl>
+          </div>
+        ) : null}
+
         {tech?.facts?.length ? (
           <div className="proom__tech-block" data-room-block="build">
-            <h4 className="proom__tech-h">How it&apos;s put together</h4>
+            <h3 className="proom__tech-h">How it&apos;s put together</h3>
             <dl className="proom__facts">
               {tech.facts.map((f, i) => (
                 <div key={`fact-${i}`} className="proom__fact">
@@ -495,7 +554,7 @@ export default function ProjectRoom({
             so the centre stays the demo alone in every room */}
         {hasDemo && demo ? (
           <div className="proom__tech-block" data-room-block="build">
-            <h4 className="proom__tech-h">How it runs</h4>
+            <h3 className="proom__tech-h">How it runs</h3>
             {demo.flow ? (
               <dl className="proom__facts">
                 <div className="proom__fact">
@@ -606,7 +665,7 @@ function Lightbox({
   return (
     <div
       className="proom-lb"
-      style={{ ["--proom-accent" as string]: accent }}
+      style={{ ["--proom-accent-raw" as string]: accent }}
       role="dialog"
       aria-modal="true"
       aria-label={`${cleanTitle} — images`}

@@ -1,19 +1,19 @@
 "use client";
 
 import { useEffect } from "react";
-import { CUBE_COLORS } from "@/components/three/cubeColors";
+import { STICKER_VARS } from "@/components/three/cubeColors";
 
 /** Solved front-face sticker layout for the flat 2D cube. */
 const FACE = [
-  CUBE_COLORS[0],
-  CUBE_COLORS[2],
-  CUBE_COLORS[4],
-  CUBE_COLORS[1],
-  CUBE_COLORS[3],
-  CUBE_COLORS[0],
-  CUBE_COLORS[2],
-  CUBE_COLORS[4],
-  CUBE_COLORS[1],
+  STICKER_VARS[0],
+  STICKER_VARS[2],
+  STICKER_VARS[4],
+  STICKER_VARS[1],
+  STICKER_VARS[3],
+  STICKER_VARS[0],
+  STICKER_VARS[2],
+  STICKER_VARS[4],
+  STICKER_VARS[1],
 ] as const;
 
 const TURN_MS = 430;

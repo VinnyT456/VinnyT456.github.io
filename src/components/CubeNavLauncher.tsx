@@ -13,7 +13,7 @@ import {
 import dynamic from "next/dynamic";
 import CubeNavBurst from "@/components/CubeNavBurst";
 import NowPlayingSignal from "@/components/NowPlayingSignal";
-import { CUBE_COLORS } from "@/components/three/cubeColors";
+import { CUBE_COLORS, STICKER_VARS } from "@/components/three/cubeColors";
 import { navLinks } from "@/lib/nav";
 import { site } from "@/data/site";
 import { useReducedMotion } from "@/lib/media";
@@ -124,7 +124,7 @@ function MiniCubeIcon({
             style={
               secretUnlocked && index === SECRET_CENTER
                 ? undefined
-                : { backgroundColor: CUBE_COLORS[colorIndex] }
+                : { backgroundColor: STICKER_VARS[colorIndex] }
             }
           />
         ))}
@@ -188,12 +188,12 @@ export default function CubeNavLauncher() {
   const active = pathname === "/" ? "home" : pathname.slice(1);
   const pageLabel = pageLabels[active] ?? "Page";
   const pageColor =
-    CUBE_COLORS[
+    STICKER_VARS[
       Math.max(
         0,
         navLinks.findIndex((l) => l.href.slice(1) === active)
-      ) % CUBE_COLORS.length
-    ] ?? CUBE_COLORS[2];
+      ) % STICKER_VARS.length
+    ] ?? STICKER_VARS[2];
 
   const faceLayout = useMemo(() => {
     if (scrambleSeed === 0) return FACE_LAYOUT;
@@ -264,6 +264,8 @@ export default function CubeNavLauncher() {
   // ⌘K / Ctrl-K opens the command palette (#1) from anywhere.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // inside the About shell, Ctrl+K is readline's "kill to end of line" (⌘K still opens this)
+      if (e.ctrlKey && !e.metaKey && (e.target as Element | null)?.closest?.(".term")) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setPaletteOpen((v) => !v);

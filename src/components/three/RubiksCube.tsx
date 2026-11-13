@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { makeCubeMaterials } from "./cubeMaterial";
+import { makeSolidCubies } from "./cubeMaterial";
+import { useTheme } from "@/lib/theme";
 
 /**
  * Self-solving Rubik's cube.
@@ -160,10 +161,9 @@ export default function RubiksCube({
     return out;
   }, []);
 
-  const materials = useMemo(
-    () => positions.map(() => makeCubeMaterials()),
-    [positions]
-  );
+  // the loader cube in daylight wears the same inked stickers as the hero cube
+  const theme = useTheme();
+  const materials = useMemo(() => makeSolidCubies(positions, theme === "light").per, [positions, theme]);
 
   useEffect(() => {
     if (!isPlayOnce || !trigger) return;

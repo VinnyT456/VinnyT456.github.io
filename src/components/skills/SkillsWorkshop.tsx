@@ -104,6 +104,8 @@ function useInlineDetails() {
 }
 
 /** How many museum projects use a tool (∞-ish for tools in every project). */
+/** how many tools carry the green dot (from the data, so the key never goes stale) */
+const LIVE_COUNT = skills.filter((s) => s.current).length;
 const PROJECT_COUNT = new Map(skills.map((s) => [s.id, projectsForSkill(s).length]));
 
 /**
@@ -455,9 +457,9 @@ export default function SkillsWorkshop() {
               </label>
 
               {/* the key for the green dot, right beside the search */}
-              <p className="sk__legend">
+              <p className="sk__legend" title="Tools in active use right now">
                 <span className="sk__live-dot" aria-hidden />
-                in use now
+                in use now · {LIVE_COUNT}
               </p>
 
               {/* quiet keyboard hint — desktop only (touch taps instead) */}
@@ -465,6 +467,8 @@ export default function SkillsWorkshop() {
                 <kbd>/</kbd> search
                 <span className="sk__keys-sep">·</span>
                 <kbd>arrows</kbd> browse
+                <span className="sk__keys-sep">·</span>
+                hover for a name
               </p>
 
               {/* view tools, grouped to the right — wide screens only */}

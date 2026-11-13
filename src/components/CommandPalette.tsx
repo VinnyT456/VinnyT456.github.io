@@ -10,10 +10,12 @@ import {
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { usePageTransition } from "@/components/transitions/PageTransitionProvider";
-import { CUBE_COLORS } from "@/components/three/cubeColors";
+import { STICKER_VARS } from "@/components/three/cubeColors";
 import { navLinks } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 import { Icon, type IconName } from "@/components/icons";
+import AskSite from "@/components/AskSite";
+import { RECRUITER_ROUTE_STOPS, startRecruiterRoute } from "@/components/RecruiterRoute";
 
 export type Command = {
   id: string;
@@ -27,7 +29,7 @@ export type Command = {
   run: () => void;
 };
 
-const GROUP_ORDER = ["Recent", "Pages", "Play", "Settings", "More"];
+const GROUP_ORDER = ["Recent", "Ask", "Tour", "Pages", "Play", "Settings", "More"];
 
 const RECENT_KEY = "workshop-recent-pages";
 
@@ -85,6 +87,9 @@ export default function CommandPalette({
   const pathname = usePathname();
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
+  // "ask" swaps the command list for the Ask-the-site panel inside this same dialog
+  const [mode, setMode] = useState<"menu" | "ask">("menu");
+  const panelRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
@@ -101,12 +106,12 @@ export default function CommandPalette({
   const commands = useMemo<Command[]>(() => {
     const pages: Command[] = [
       // ids are hrefs so Recent (which stores hrefs) can match every page
-      { id: "/", label: "Home", href: "/", color: CUBE_COLORS[2] },
+      { id: "/", label: "Home", href: "/", color: STICKER_VARS[2] },
       ...navLinks.map((l, i) => ({
         id: l.href,
         label: l.label,
         href: l.href,
-        color: CUBE_COLORS[i % CUBE_COLORS.length],
+        color: STICKER_VARS[i % STICKER_VARS.length],
       })),
     ].map((p) => ({
       id: p.id,
@@ -118,10 +123,35 @@ export default function CommandPalette({
       run: () => go(p.href),
     }));
 
-    const actions: Command[] = [...(extraActions ?? [])];
+    const actions: Command[] = [
+      {
+        id: "ask-site",
+        label: "Ask the site",
+        hint: "answers from this site",
+        kind: "action",
+        group: "Ask",
+        icon: "zap",
+        keywords: "ask question chat answer ai gemma who what how about",
+        run: () => setMode("ask"),
+      },
+      {
+        id: "recruiter-route",
+        label: "Take the recruiter route",
+        hint: `${RECRUITER_ROUTE_STOPS} stops, about a minute`,
+        kind: "action",
+        group: "Tour",
+        icon: "flag",
+        keywords: "recruiter tour guided route walkthrough hiring manager best of start here",
+        run: () => {
+          onClose();
+          startRecruiterRoute();
+        },
+      },
+      ...(extraActions ?? []),
+    ];
 
     return [...pages, ...actions];
-  }, [go, extraActions]);
+  }, [go, onClose, extraActions]);
 
   const recentHrefs = useMemo(() => (open ? readRecent() : []), [open]);
 
@@ -177,11 +207,53 @@ export default function CommandPalette({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setQuery("");
     setActive(0);
+    setMode("menu");
     const id = requestAnimationFrame(() => inputRef.current?.focus());
     return () => cancelAnimationFrame(id);
   }, [open]);
 
+  // Focus goes back to whatever opened the palette once it closes.
+  useEffect(() => {
+    if (!open) return;
+    const opener = document.activeElement as HTMLElement | null;
+    return () => {
+      if (opener && opener !== document.body && opener.isConnected) opener.focus({ preventScroll: true });
+    };
+  }, [open]);
+
+  // Back from Ask lands on the search box, with the list as it was.
+  const backToMenu = useCallback(() => {
+    setMode("menu");
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, []);
+
+  // aria-modal means Tab must not wander onto the page behind.
+  const trapTab = (e: React.KeyboardEvent) => {
+    const nodes = panelRef.current?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), a[href], [tabindex="0"]'
+    );
+    if (!nodes?.length) return;
+    const first = nodes[0];
+    const last = nodes[nodes.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+
   const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Tab") return trapTab(e);
+    if (mode === "ask") {
+      // the Ask panel owns Enter/arrows (a form, buttons); only Esc is shared
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+      return;
+    }
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setActive((a) => Math.min(results.length - 1, a + 1));
@@ -208,9 +280,13 @@ export default function CommandPalette({
 
   // Portal to <body> so it centers on the viewport, not inside the launcher.
   return createPortal(
-    <div className="cmdk" role="dialog" aria-modal="true" aria-label="Command menu">
+    <div className="cmdk" role="dialog" aria-modal="true" aria-label={mode === "ask" ? "Ask the site" : "Command menu"}>
       <div className="cmdk__backdrop" onClick={onClose} aria-hidden />
-      <div className="cmdk__panel" onKeyDown={onKeyDown}>
+      <div className="cmdk__panel" ref={panelRef} onKeyDown={onKeyDown}>
+        {mode === "ask" ? (
+          <AskSite onBack={backToMenu} onClose={onClose} />
+        ) : (
+          <>
         <div className="cmdk__search">
           <span className="cmdk__prompt font-mono" aria-hidden>
             ⌘
@@ -279,6 +355,8 @@ export default function CommandPalette({
           <span>↵ open</span>
           <span>esc close</span>
         </div>
+          </>
+        )}
       </div>
     </div>,
     document.body

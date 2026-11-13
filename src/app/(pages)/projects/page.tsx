@@ -2,11 +2,14 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { exhibits } from "@/data/museum";
 import ProjectsPageClient from "./ProjectsPageClient";
+import { pageMeta } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: "Projects — Vincent Tang",
   description: `${exhibits.length} projects by Vincent Tang, laid out as a walk-through museum: one room per project, with the story, the stack, and what it achieved.`,
-};
+  path: "/projects",
+  image: "/og/projects.png",
+});
 
 export default function ProjectsPage() {
   return (

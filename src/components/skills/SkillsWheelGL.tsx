@@ -5,7 +5,8 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { skills } from "@/data/skills";
 import { useReducedMotion } from "@/lib/media";
-import { CUBE_COLORS } from "@/components/three/cubeColors";
+import { CUBE_COLORS, lightStickers } from "@/components/three/cubeColors";
+import { useTheme } from "@/lib/theme";
 import { MedalButton, buildMedals, lightFor, mulberry32, type Medal, type WheelProps } from "./wheelShared";
 
 /**
@@ -49,6 +50,15 @@ const WHEEL_SCALE = 1.5;
  *  `flat` face-on — the scene eases between them as the disc turns. */
 type Reg = (m: THREE.Material | null, base: number, flat: number) => void;
 
+/** The wheel by day is a printed star chart: ink lines, flat dust, no glow.
+ *  (Night is untouched; every day value below is used only when `day` is set.) */
+const INK = "#2a2160"; // rings and ticks, violet-ink
+const INK_STAR = "#3b2a9a"; // the star glyphs
+const INK_FAINT = "#8a7cc9"; // the dotted axes
+const INK_LINK = "#5b2fe0"; // the lit tool's links
+/** line opacities run heavier on paper: pale lines on white need the weight */
+const dayOp = (o: number, day: boolean) => (day ? Math.min(1, o * 1.7) : o);
+
 function circlePoints(r: number, n = 256) {
   const pts: number[] = [];
   for (let i = 0; i < n; i++) {
@@ -58,7 +68,7 @@ function circlePoints(r: number, n = 256) {
   return new Float32Array(pts);
 }
 
-function Ring({ r, opacity = 0.32, flat = opacity, reg }: { r: number; opacity?: number; flat?: number; reg?: Reg }) {
+function Ring({ r, opacity = 0.32, flat = opacity, reg, day = false }: { r: number; opacity?: number; flat?: number; reg?: Reg; day?: boolean }) {
   const geo = useMemo(() => {
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.BufferAttribute(circlePoints(r), 3));
@@ -66,7 +76,7 @@ function Ring({ r, opacity = 0.32, flat = opacity, reg }: { r: number; opacity?:
   }, [r]);
   return (
     <lineLoop geometry={geo}>
-      <lineBasicMaterial ref={(m) => reg?.(m, opacity, flat)} color="#e9e6ff" transparent opacity={opacity} depthWrite={false} />
+      <lineBasicMaterial ref={(m) => reg?.(m, dayOp(opacity, day), dayOp(flat, day))} color={day ? INK : "#e9e6ff"} transparent opacity={dayOp(opacity, day)} depthWrite={false} toneMapped={!day} />
     </lineLoop>
   );
 }
@@ -78,6 +88,7 @@ function Ticks({
   opacity = 0.35,
   flat = opacity,
   reg,
+  day = false,
 }: {
   r: number;
   every?: number;
@@ -85,6 +96,7 @@ function Ticks({
   opacity?: number;
   flat?: number;
   reg?: Reg;
+  day?: boolean;
 }) {
   const geo = useMemo(() => {
     const pts: number[] = [];
@@ -99,7 +111,7 @@ function Ticks({
   }, [r, every, len]);
   return (
     <lineSegments geometry={geo}>
-      <lineBasicMaterial ref={(m) => reg?.(m, opacity, flat)} color="#e9e6ff" transparent opacity={opacity} depthWrite={false} />
+      <lineBasicMaterial ref={(m) => reg?.(m, dayOp(opacity, day), dayOp(flat, day))} color={day ? INK : "#e9e6ff"} transparent opacity={dayOp(opacity, day)} depthWrite={false} toneMapped={!day} />
     </lineSegments>
   );
 }
@@ -120,14 +132,14 @@ const STAR_SHAPE = (() => {
   return new THREE.ShapeGeometry(s);
 })();
 
-function Stars({ r, count, size, flat = 0.9, reg }: { r: number; count: number; size: number; flat?: number; reg?: Reg }) {
+function Stars({ r, count, size, flat = 0.9, reg, day = false }: { r: number; count: number; size: number; flat?: number; reg?: Reg; day?: boolean }) {
   return (
     <>
       {Array.from({ length: count }, (_, i) => {
         const a = (i / count) * Math.PI * 2;
         return (
           <mesh key={i} geometry={STAR_SHAPE} position={[Math.cos(a) * r, Math.sin(a) * r, 0.002]} scale={size}>
-            <meshBasicMaterial ref={(m) => reg?.(m, 0.9, flat)} color="#f1eeff" transparent opacity={0.9} depthWrite={false} />
+            <meshBasicMaterial ref={(m) => reg?.(m, day ? 0.95 : 0.9, day ? Math.min(1, flat * 1.7) : flat)} color={day ? INK_STAR : "#f1eeff"} transparent opacity={day ? 0.95 : 0.9} depthWrite={false} toneMapped={!day} />
           </mesh>
         );
       })}
@@ -171,7 +183,7 @@ function buildDust(reduced: boolean) {
       depthWrite: false,
       blending: THREE.AdditiveBlending,
       vertexColors: true,
-      uniforms: { uTime: { value: 0 }, uPixel: { value: 1 }, uStill: { value: reduced ? 1 : 0 } },
+      uniforms: { uTime: { value: 0 }, uPixel: { value: 1 }, uStill: { value: reduced ? 1 : 0 }, uDay: { value: 0 } },
       vertexShader: /* glsl */ `
         attribute vec2 aSeed;
         uniform float uTime;
@@ -179,8 +191,10 @@ function buildDust(reduced: boolean) {
         uniform float uStill;
         varying vec3 vColor;
         varying float vTw;
+        varying float vMix;
         void main() {
           vColor = color;
+          vMix = fract(aSeed.x * 0.37);
           float t = uTime * (1.0 - uStill);
           vTw = 0.45 + 0.55 * (0.5 + 0.5 * sin(t * aSeed.y + aSeed.x));
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
@@ -189,13 +203,22 @@ function buildDust(reduced: boolean) {
         }
       `,
       fragmentShader: /* glsl */ `
+        uniform float uDay;
         varying vec3 vColor;
         varying float vTw;
+        varying float vMix;
         void main() {
           float d = length(gl_PointCoord - 0.5);
           if (d > 0.5) discard;
           float core = smoothstep(0.5, 0.0, d);
-          gl_FragColor = vec4(vColor * core * vTw, core * vTw);
+          if (uDay > 0.5) {
+            // by day: flat ink pin-pricks on normal blending (additive vanishes on paper)
+            vec3 ink = mix(vec3(0.427, 0.290, 0.878), vec3(0.45, 0.40, 0.78), vMix);
+            float a = core * (0.55 + 0.45 * vTw) * 0.85;
+            gl_FragColor = vec4(ink, a);
+          } else {
+            gl_FragColor = vec4(vColor * core * vTw, core * vTw);
+          }
         }
       `,
     });
@@ -203,10 +226,17 @@ function buildDust(reduced: boolean) {
   }
 }
 
-function StarDust({ reduced }: { reduced: boolean }) {
+function StarDust({ reduced, day = false }: { reduced: boolean; day?: boolean }) {
   // built once; the per-frame uniform writes go through the material ref
   const dust = useMemo(() => buildDust(reduced), [reduced]);
   const matRef = useRef<THREE.ShaderMaterial>(null);
+  useEffect(() => {
+    const m = matRef.current;
+    if (!m) return;
+    m.uniforms.uDay.value = day ? 1 : 0;
+    m.blending = day ? THREE.NormalBlending : THREE.AdditiveBlending;
+    m.needsUpdate = true;
+  }, [day]);
   useFrame((state, dt) => {
     const m = matRef.current;
     if (!m) return;
@@ -220,7 +250,7 @@ function StarDust({ reduced }: { reduced: boolean }) {
   );
 }
 
-function DottedAxes({ reg }: { reg?: Reg }) {
+function DottedAxes({ reg, day = false }: { reg?: Reg; day?: boolean }) {
   const geo = useMemo(() => {
     const pts: number[] = [];
     for (let v = -3.5; v <= 3.5; v += 0.045) pts.push(v, 0, 0, 0, v, 0);
@@ -230,12 +260,12 @@ function DottedAxes({ reg }: { reg?: Reg }) {
   }, []);
   return (
     <points geometry={geo}>
-      <pointsMaterial ref={(m) => reg?.(m, 0.45, 0)} color="#cfcae6" size={1.6} sizeAttenuation={false} transparent opacity={0.45} depthWrite={false} />
+      <pointsMaterial ref={(m) => reg?.(m, day ? 0.7 : 0.45, 0)} color={day ? INK_FAINT : "#cfcae6"} size={1.6} sizeAttenuation={false} transparent opacity={day ? 0.7 : 0.45} depthWrite={false} toneMapped={!day} />
     </points>
   );
 }
 
-function Glow({ size = RIM * 2, opacity = 1, flat = opacity, reg }: { size?: number; opacity?: number; flat?: number; reg?: Reg }) {
+function Glow({ size = RIM * 2, opacity = 1, flat = opacity, reg, day = false }: { size?: number; opacity?: number; flat?: number; reg?: Reg; day?: boolean }) {
   const tex = useMemo(() => {
     const c = document.createElement("canvas");
     c.width = c.height = 256;
@@ -255,32 +285,36 @@ function Glow({ size = RIM * 2, opacity = 1, flat = opacity, reg }: { size?: num
     <mesh position={[0, 0, -0.01]}>
       <planeGeometry args={[size, size]} />
       <meshBasicMaterial
-        ref={(m) => reg?.(m, opacity, flat)}
+        ref={(m) => reg?.(m, day ? opacity * 0.28 : opacity, day ? flat * 0.28 : flat)}
         map={tex}
         transparent
-        opacity={opacity}
+        opacity={day ? opacity * 0.28 : opacity}
         depthWrite={false}
-        blending={THREE.AdditiveBlending}
+        // by day the halo is a faint lilac wash laid on the paper (additive would add nothing)
+        blending={day ? THREE.NormalBlending : THREE.AdditiveBlending}
+        toneMapped={!day}
       />
     </mesh>
   );
 }
 
-function CubeCore() {
+function CubeCore({ day = false }: { day?: boolean }) {
   const s = 0.13;
   const g = 0.018;
+  // by day the core cube is printed: the page's light stickers, not the night ones
+  const pal = day ? lightStickers() : CUBE_COLORS;
   const cells: [number, number, string][] = [
-    [-1, 1, CUBE_COLORS[0]],
-    [1, 1, CUBE_COLORS[1]],
-    [-1, -1, CUBE_COLORS[4]],
-    [1, -1, CUBE_COLORS[3]],
+    [-1, 1, pal[0]],
+    [1, 1, pal[1]],
+    [-1, -1, pal[4]],
+    [1, -1, pal[3]],
   ];
   return (
     <group position={[0, 0, 0.004]}>
       {cells.map(([x, y, c]) => (
         <mesh key={c} position={[(x * (s + g)) / 2, (y * (s + g)) / 2, 0]}>
           <planeGeometry args={[s, s]} />
-          <meshBasicMaterial color={c} />
+          <meshBasicMaterial color={c} toneMapped={!day} />
         </mesh>
       ))}
     </group>
@@ -320,7 +354,9 @@ function Scene({
   ctl,
   reduced,
   kick,
+  day,
 }: {
+  day: boolean;
   medals: Medal[];
   medalRefs: React.RefObject<(HTMLButtonElement | null)[]>;
   rootRef: React.RefObject<HTMLElement | null>;
@@ -712,9 +748,10 @@ function Scene({
     if (!linkGeo) return;
     // tinted with the lit tool's own colour, softened toward the ring silver
     const mat = linkMatRef.current;
-    if (mat && brand && linkTint.current.brand !== brand) {
-      linkTint.current.brand = brand;
-      mat.color.set(brand).lerp(linkTint.current.color.set("#e9e6ff"), 0.6);
+    const tintKey = `${brand}|${day}`;
+    if (mat && brand && linkTint.current.brand !== tintKey) {
+      linkTint.current.brand = tintKey;
+      mat.color.set(brand).lerp(linkTint.current.color.set(day ? "#3a1fa8" : "#e9e6ff"), day ? 0.5 : 0.6);
     }
     const arr = linkGeo.attributes.position.array as Float32Array;
     const w = 0.0065; // half-width in disc units, about 2px across on screen
@@ -745,29 +782,29 @@ function Scene({
 
   return (
     <group ref={disc} rotation={DISC_ROT} position={[0, 0.55, 0]} scale={reduced ? WHEEL_SCALE : 0.001}>
-      <Glow />
+      <Glow day={day} />
       {/* stood up: a soft halo gathers round the nucleus */}
-      <Glow size={1.9} opacity={0} flat={0.85} reg={reg} />
-      <DottedAxes reg={reg} />
-      <StarDust reduced={reduced} />
+      <Glow size={1.9} opacity={0} flat={0.85} reg={reg} day={day} />
+      <DottedAxes reg={reg} day={day} />
+      <StarDust reduced={reduced} day={day} />
       {RADII.slice(0, 4).map((r, i) => (
         <group key={r} ref={(el) => void (rings.current[i] = el)}>
           {/* stood up, shells step from bright (inner) to faint (outer); their
               stars and ticks fade so only nucleus, shells and tools remain */}
-          <Ring r={r} flat={SHELL_FLAT[i]} reg={reg} />
-          {i % 2 === 1 ? <Ticks r={r + 0.06} flat={0} reg={reg} /> : null}
-          <Stars r={r} count={i === 0 ? 4 : 8} size={i === 0 ? 0.05 : 0.06} flat={0} reg={reg} />
+          <Ring r={r} flat={SHELL_FLAT[i]} reg={reg} day={day} />
+          {i % 2 === 1 ? <Ticks r={r + 0.06} flat={0} reg={reg} day={day} /> : null}
+          <Stars r={r} count={i === 0 ? 4 : 8} size={i === 0 ? 0.05 : 0.06} flat={0} reg={reg} day={day} />
         </group>
       ))}
       <group ref={(el) => void (rings.current[4] = el)}>
-        <Ring r={RADII[4]} opacity={0.4} flat={0.16} reg={reg} />
-        <Ticks r={RADII[4] + 0.05} every={2} len={0.06} opacity={0.4} flat={0.12} reg={reg} />
-        <Ring r={RADII[4] + 0.22} opacity={0.18} flat={0} reg={reg} />
-        <Stars r={RADII[4] + 0.11} count={12} size={0.09} flat={0.3} reg={reg} />
+        <Ring r={RADII[4]} opacity={0.4} flat={0.16} reg={reg} day={day} />
+        <Ticks r={RADII[4] + 0.05} every={2} len={0.06} opacity={0.4} flat={0.12} reg={reg} day={day} />
+        <Ring r={RADII[4] + 0.22} opacity={0.18} flat={0} reg={reg} day={day} />
+        <Stars r={RADII[4] + 0.11} count={12} size={0.09} flat={0.3} reg={reg} day={day} />
       </group>
       <group ref={(el) => void (rings.current[5] = el)}>
-        <Ring r={0.32} opacity={0.4} flat={0.6} reg={reg} />
-        <CubeCore />
+        <Ring r={0.32} opacity={0.4} flat={0.6} reg={reg} day={day} />
+        <CubeCore day={day} />
       </group>
       <mesh frustumCulled={false}>
         <bufferGeometry ref={linkGeoRef} drawRange={{ start: 0, count: 0 }}>
@@ -775,9 +812,9 @@ function Scene({
         </bufferGeometry>
         <meshBasicMaterial
           ref={linkMatRef}
-          color="#c4b5fd"
+          color={day ? INK_LINK : "#c4b5fd"}
           transparent
-          opacity={0.75}
+          opacity={day ? 0.7 : 0.75}
           depthWrite={false}
           side={THREE.DoubleSide}
         />
@@ -800,6 +837,7 @@ export default function SkillsWheelGL({
   onFlatChange,
 }: WheelProps) {
   const reduced = useReducedMotion();
+  const day = useTheme() === "light";
   const [hoverId, setHoverId] = useState<string | null>(null);
   const litId = hoverId ?? (picked ? selectedId : null);
   const light = useMemo(() => lightFor(litId), [litId]);
@@ -890,7 +928,8 @@ export default function SkillsWheelGL({
             centerRef={centerRef}
             ctl={ctl}
             reduced={reduced}
-            kick={`${litId}|${picked}|${selectedId}|${paused}|${matchIds?.size ?? -1}|${flat}`}
+            day={day}
+            kick={`${day}|${litId}|${picked}|${selectedId}|${paused}|${matchIds?.size ?? -1}|${flat}`}
           />
         </Canvas>
 

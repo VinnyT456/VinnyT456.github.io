@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { site } from "@/data/site";
+import { exhibits, exhibitSlug } from "@/data/museum";
 import { Icon } from "@/components/icons";
 import dynamic from "next/dynamic";
 import Typewriter from "./Typewriter";
@@ -28,6 +29,10 @@ const ParticleCube = dynamic(() => import("./three/ParticleCube"), {
   ),
 });
 
+// The world inside the cube loads only when someone steps in.
+const loadCubeWorld = () => import("./world/CubeWorld");
+const CubeWorld = dynamic(loadCubeWorld, { ssr: false });
+
 // Deadpan reactions the HUD fires back at the visitor. Pools, so the same
 // gesture never gives the same line twice in a row.
 const QUIPS: Record<"drag" | "fastspin" | "scramble" | "solved", string[]> = {
@@ -36,12 +41,13 @@ const QUIPS: Record<"drag" | "fastspin" | "scramble" | "solved", string[]> = {
   scramble: ["oh, we're doing this", "bold move", "hope you can solve it"],
   solved: ["…solved itself. rude", "nailed it (i did)", "good as new"],
 };
-// After this much idle time, the HUD nudges toward the hidden scramble.
+// After this much idle time, the HUD nudges toward the world inside.
 const IDLE_NUDGE_MS = 6500;
 // Touch and mouse get their own verbs — phones never see "click".
 const NUDGE = {
-  fine: "psst, double-click me",
-  coarse: "psst, double-tap me",
+  // the pill already says how to get in; the nudge says why you'd want to
+  fine: "psst, there's a town in here",
+  coarse: "psst, there's a town in here",
   keys: "psst, arrows spin me",
 };
 
@@ -72,6 +78,79 @@ class SceneErrorBoundary extends Component<
 export default function Hero() {
   const [routeLabel, setRouteLabel] = useState<string | null>(null);
   const handleRoute = useCallback((label: string | null) => setRouteLabel(label), []);
+
+  // Inside the cube: the world opens from the cube's centre, and on the way
+  // out focus goes back to whatever opened it (the cube or the button).
+  const stageRef = useRef<HTMLDivElement>(null);
+  const opener = useRef<HTMLElement | null>(null);
+  const [worldOrigin, setWorldOrigin] = useState<{ x: number; y: number } | null>(null);
+  // Entering is two beats: the cube opens (twists, bursts, rushes in), then the
+  // world opens from where it was. A failsafe opens the world anyway if the
+  // cube can't play its part (no WebGL, an off-screen canvas).
+  const [opening, setOpening] = useState(false);
+  const openFailsafe = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const openWorld = useCallback(() => {
+    if (openFailsafe.current) clearTimeout(openFailsafe.current);
+    openFailsafe.current = null;
+    const r = stageRef.current?.getBoundingClientRect();
+    setWorldOrigin(
+      r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : { x: window.innerWidth / 2, y: window.innerHeight / 2 }
+    );
+  }, []);
+  const enterWorld = useCallback(() => {
+    if (opening) return;
+    opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setOpening(true);
+    openFailsafe.current = setTimeout(openWorld, 1400);
+  }, [opening, openWorld]);
+  // /?island=<project-slug> (the museum's "See it on the island") opens the
+  // world at once with the walker at that project's door; no cube animation
+  const [islandStart, setIslandStart] = useState<{ project: number } | null>(null);
+  useEffect(() => {
+    const slug = new URLSearchParams(window.location.search).get("island");
+    if (!slug) return;
+    // the link is spent: Back from the world lands on a plain Home
+    history.replaceState(history.state, "", window.location.pathname + window.location.hash);
+    const project = exhibits.findIndex((e) => exhibitSlug(e) === slug);
+    if (project < 0) return;
+    opener.current = null;
+    // open as soon as the chunk is in (it is a callback, not a render-time write)
+    void loadCubeWorld().then(() => {
+      setIslandStart({ project });
+      openWorld();
+    });
+  }, [openWorld]);
+  // the recruiter route's last stop opens the cube island through this event
+  useEffect(() => {
+    const open = () => enterWorld();
+    window.addEventListener("cube-world:enter", open);
+    return () => window.removeEventListener("cube-world:enter", open);
+  }, [enterWorld]);
+  const closeWorld = useCallback(() => {
+    setWorldOrigin(null);
+    setIslandStart(null);
+    // the cube puts itself back together
+    setOpening(false);
+  }, []);
+  useEffect(
+    () => () => {
+      if (openFailsafe.current) clearTimeout(openFailsafe.current);
+    },
+    []
+  );
+  // fetch the world while the page is idle, so a double-click opens it at once
+  useEffect(() => {
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 2500));
+    const cancel = window.cancelIdleCallback ?? window.clearTimeout;
+    const id = idle(() => void loadCubeWorld(), { timeout: 8000 });
+    return () => cancel(id);
+  }, []);
+  // after the world unmounts (and the page is no longer inert), not before
+  useEffect(() => {
+    if (worldOrigin || !opener.current) return;
+    if (opener.current.isConnected) opener.current.focus({ preventScroll: true });
+    opener.current = null;
+  }, [worldOrigin]);
 
   // Playful HUD: a transient reaction to the last gesture, or an idle nudge.
   // `null` = show the default (route label / "spin to explore").
@@ -145,7 +224,19 @@ export default function Hero() {
             <span className="text-foreground">{site.role}.</span>{" "}
             <HoverReveal as="span" tone="accent">{site.tagline}</HoverReveal>
           </p>
-          <div className="mt-6 flex w-full flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-center md:justify-start">
+          {/* what I'm on right now: part of the introduction, not another status row */}
+          <p className="hero-now mx-auto mt-2 max-w-md text-pretty text-base text-muted md:mx-0">
+            Right now: building{" "}
+            <a className="live-now__link" href={site.now.building.href} target="_blank" rel="noopener noreferrer">
+              {site.now.building.label}
+            </a>{" "}
+            at {site.now.building.at}, and engineering on a{" "}
+            <a className="live-now__link" href={site.now.team.href} target="_blank" rel="noopener noreferrer">
+              {site.now.team.label}
+            </a>{" "}
+            team.
+          </p>
+          <div className="mt-6 flex w-full flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-center md:justify-start ">
             <MagneticButton
               href="/projects"
               variant="primary"
@@ -174,10 +265,40 @@ export default function Hero() {
           </div>
         </div>
 
-        <div className="cube-stage relative w-full">
+        <div ref={stageRef} className="cube-stage relative w-full">
           <SceneErrorBoundary fallback={<CubeUnavailable />}>
-            <ParticleCube onRoute={handleRoute} onInteract={handleInteract} />
+            <ParticleCube
+              onRoute={handleRoute}
+              onInteract={handleInteract}
+              onEnter={enterWorld}
+              opening={opening}
+              onOpened={openWorld}
+            />
           </SceneErrorBoundary>
+
+          {/* The way in, always on show. Hovering (or focusing) the cube
+              swaps it to what a click there does, and how to step inside. */}
+          <button
+            type="button"
+            className="cube-pill"
+            onClick={enterWorld}
+            onPointerEnter={() => void loadCubeWorld()}
+            onFocus={() => void loadCubeWorld()}
+          >
+            <span className="cube-pill__rest">
+              Step inside
+              <Icon name="chevronRight" size={12} aria-hidden />
+            </span>
+            {routeLabel ? (
+              <span className="cube-pill__hover" aria-hidden>
+                <span className="text-accent">↵</span> {routeLabel}
+                <span className="cube-pill__sep">·</span>
+                <span className="cube-pill__fine">double-click</span>
+                <span className="cube-pill__coarse">double-tap</span>
+              </span>
+            ) : null}
+          </button>
+
 
           {/* HUD pinned to the top of the cube stage — a label above the cube.
               Absolute-pinned (not in flow) so it hugs the stage top on every
@@ -216,6 +337,7 @@ export default function Hero() {
           </div>
         </div>
       </div>
+      {worldOrigin ? <CubeWorld origin={worldOrigin} onClose={closeWorld} startAt={islandStart} /> : null}
     </section>
   );
 }

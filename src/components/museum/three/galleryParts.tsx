@@ -1,11 +1,15 @@
 "use client";
 
+/* eslint-disable react-hooks/immutability -- the shared materials, lights and dust positions are Three.js render state, blended or moved each frame. */
+
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { demoFiles, type ExhibitType } from "@/data/museum";
 import { CUBE_COLORS } from "@/components/three/cubeColors";
+import { CityMaterials } from "./City";
+import { stepTimeOfDay, tod } from "./timeOfDay";
 
 /**
  * Shared gallery-hall pieces (the interior that sits behind the museum doors).
@@ -48,59 +52,188 @@ export function Hall({ count }: { count: number }) {
     () => Array.from({ length: count + 4 }, (_, i) => 8 - i * SPACING),
     [count]
   );
+  // the hall's surfaces, each blended night → day with the museum's time of day:
+  // dark rooms by night; a pale lilac, daylit hall (paper walls, violet shade) by day
+  const mats = useMemo(() => {
+    const m = new CityMaterials();
+    const double = <T extends THREE.Material>(x: T) => {
+      x.side = THREE.DoubleSide;
+      return x;
+    };
+    return {
+      all: m,
+      floor: m.std("#10131b", "#d9d4ee", 1),
+      wall: double(m.std("#0d1017", "#e6e2f4", 1)),
+      ceiling: double(m.std("#0b0d14", "#f4f2fb", 1)),
+      end: double(m.std("#0c0f16", "#e2def2", 1)),
+      strip: m.basic("#dfe6ff", "#ffffff", 0.14, 0.95),
+      floorLine: m.line(0.14),
+      seam: m.strip(0.08),
+      rail: m.strip(0.12),
+    };
+  }, []);
+  useFrame(({ clock }) => {
+    stepTimeOfDay();
+    mats.all.update();
+    getStandMats().all.update();
+  });
 
   return (
     <group>
       {/* floor */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, midZ]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, midZ]} receiveShadow material={mats.floor}>
         <planeGeometry args={[HALL_W, len]} />
-        <meshStandardMaterial color="#10131b" roughness={1} />
       </mesh>
-      <lineSegments geometry={floorEdges} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, midZ]}>
-        <lineBasicMaterial color="#c9d2e6" transparent opacity={0.14} />
-      </lineSegments>
+      <lineSegments geometry={floorEdges} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, midZ]} material={mats.floorLine} />
       {seams.map((z) => (
-        <mesh key={z} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, z]}>
+        <mesh key={z} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, z]} material={mats.seam}>
           <planeGeometry args={[HALL_W, 0.03]} />
-          <meshBasicMaterial color="#c9d2e6" transparent opacity={0.08} />
         </mesh>
       ))}
 
       {/* side walls */}
       {[-1, 1].map((s) => (
         <group key={s}>
-          <mesh position={[s * (HALL_W / 2), 4, midZ]} rotation={[0, (-s * Math.PI) / 2, 0]}>
+          <mesh position={[s * (HALL_W / 2), 4, midZ]} rotation={[0, (-s * Math.PI) / 2, 0]} material={mats.wall}>
             <planeGeometry args={[len, 8]} />
-            <meshStandardMaterial color="#0d1017" roughness={1} side={THREE.DoubleSide} />
           </mesh>
           {[0.4, 7.4].map((y) => (
-            <mesh key={y} position={[s * (HALL_W / 2 - 0.01), y, midZ]} rotation={[0, (-s * Math.PI) / 2, 0]}>
+            <mesh key={y} position={[s * (HALL_W / 2 - 0.01), y, midZ]} rotation={[0, (-s * Math.PI) / 2, 0]} material={mats.rail}>
               <planeGeometry args={[len, 0.05]} />
-              <meshBasicMaterial color="#c9d2e6" transparent opacity={0.12} />
             </mesh>
           ))}
         </group>
       ))}
 
       {/* ceiling with a soft light strip */}
-      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 8, midZ]}>
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 8, midZ]} material={mats.ceiling}>
         <planeGeometry args={[HALL_W, len]} />
-        <meshStandardMaterial color="#0b0d14" roughness={1} side={THREE.DoubleSide} />
       </mesh>
-      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 7.9, midZ]}>
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 7.9, midZ]} material={mats.strip}>
         <planeGeometry args={[1.4, len]} />
-        <meshBasicMaterial color="#dfe6ff" transparent opacity={0.14} />
       </mesh>
       {/* far back wall — encloses the hall's far end */}
-      <mesh position={[0, 4, endZ - 12]}>
+      <mesh position={[0, 4, endZ - 12]} material={mats.end}>
         <planeGeometry args={[HALL_W, 8]} />
-        <meshStandardMaterial color="#0c0f16" roughness={1} side={THREE.DoubleSide} />
       </mesh>
       {/* entrance wall behind the camera's start — so you can't see a prior hall */}
-      <mesh position={[0, 4, frontZ + 4]} rotation={[0, Math.PI, 0]}>
+      <mesh position={[0, 4, frontZ + 4]} rotation={[0, Math.PI, 0]} material={mats.end}>
         <planeGeometry args={[HALL_W, 8]} />
-        <meshStandardMaterial color="#0c0f16" roughness={1} side={THREE.DoubleSide} />
       </mesh>
+      <Sunlight count={count} />
+    </group>
+  );
+}
+
+/* --- Morning light ---------------------------------------------------------- */
+// By day: skylights in the ceiling, soft shafts falling slantwise to bright
+// patches on the floor, and dust turning slowly in the beams. Everything here is
+// invisible at night (opacity follows the time of day), and nothing mounts or
+// unmounts as the hour changes.
+const BEAM_LEAN = 3.2; // how far each shaft slants across the hall, in x
+/** a vertical fade: strong at the skylight, gone at the floor */
+function beamTexture() {
+  const c = document.createElement("canvas");
+  c.width = 4;
+  c.height = 128;
+  const g = c.getContext("2d")!;
+  const grad = g.createLinearGradient(0, 0, 0, 128);
+  grad.addColorStop(0, "rgba(255,255,255,0.95)");
+  grad.addColorStop(0.55, "rgba(255,255,255,0.32)");
+  grad.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 4, 128);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+/** a soft-edged patch for where a shaft lands */
+function patchTexture() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 64;
+  const g = c.getContext("2d")!;
+  const grad = g.createRadialGradient(32, 32, 4, 32, 32, 32);
+  grad.addColorStop(0, "rgba(255,255,255,0.95)");
+  grad.addColorStop(0.6, "rgba(255,255,255,0.5)");
+  grad.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 64, 64);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+function Sunlight({ count }: { count: number }) {
+  // a skylight every other case, alternating which side of the aisle the sun comes in on
+  const lights = useMemo(
+    () => Array.from({ length: Math.ceil(count / 2) + 1 }, (_, k) => ({ z: 6 - k * SPACING * 2 + 3, x: k % 2 ? -1.2 : 1.2, k })),
+    [count]
+  );
+  const beamTex = useMemo(() => beamTexture(), []);
+  const patchTex = useMemo(() => patchTexture(), []);
+  const beamMat = useMemo(() => new THREE.MeshBasicMaterial({ map: beamTex, transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 0 }), [beamTex]);
+  const patchMat = useMemo(() => new THREE.MeshBasicMaterial({ map: patchTex, transparent: true, depthWrite: false, opacity: 0, color: "#ffffff" }), [patchTex]);
+  const sky = useMemo(() => new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0 }), []);
+  const dust = useRef<THREE.Points>(null);
+  const dustMat = useMemo(() => new THREE.PointsMaterial({ color: "#7a66d8", size: 0.07, sizeAttenuation: true, transparent: true, opacity: 0, depthWrite: false }), []);
+  const DUST = 28;
+  const dustGeo = useMemo(() => {
+    const g = new THREE.BufferGeometry();
+    const pos = new Float32Array(lights.length * DUST * 3);
+    let n = 0;
+    for (const l of lights)
+      for (let i = 0; i < DUST; i++) {
+        // inside the beam: along its slant, spread a little either side
+        const u = ((i * 0.6180339) % 1);
+        pos[n++] = l.x + (l.k % 2 ? 1 : -1) * BEAM_LEAN * u + (((i * 7) % 11) / 11 - 0.5) * 0.9;
+        pos[n++] = 7.9 - 7.9 * u;
+        pos[n++] = l.z + (((i * 5) % 13) / 13 - 0.5) * 1.4;
+      }
+    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    return g;
+  }, [lights]);
+  // where each mote started, so its drift is a function of time, not an accumulation
+  const dustBase = useMemo(() => Float32Array.from({ length: lights.length * DUST }, (_, i) => (dustGeo.getAttribute("position") as THREE.BufferAttribute).getY(i)), [dustGeo, lights.length]);
+  useFrame(({ clock }) => {
+    const t = tod();
+    beamMat.opacity = 0.42 * t;
+    patchMat.opacity = 0.8 * t;
+    sky.opacity = t;
+    dustMat.opacity = 0.55 * t;
+    // the dust drifts a little: upward in the beam, looping
+    const p = dust.current?.geometry.getAttribute("position") as THREE.BufferAttribute | undefined;
+    if (p && t > 0.01) {
+      const time = clock.elapsedTime;
+      for (let i = 0; i < p.count; i++) p.setY(i, 0.4 + ((dustBase[i] + time * 0.1 + Math.sin(time * 0.3 + i) * 0.05) % 7.4));
+      p.needsUpdate = true;
+    }
+  });
+  return (
+    <group>
+      {lights.map((l) => {
+        const dir = l.k % 2 ? 1 : -1;
+        const cx = l.x + (dir * BEAM_LEAN) / 2;
+        const lean = Math.atan2(BEAM_LEAN, 7.9);
+        return (
+          <group key={l.k}>
+            {/* the skylight, set in the ceiling */}
+            <mesh rotation={[Math.PI / 2, 0, 0]} position={[l.x, 7.95, l.z]} material={sky}>
+              <planeGeometry args={[2.2, 3.4]} />
+            </mesh>
+            {/* the shaft: two crossing sheets, slanting down to the floor */}
+            {[0, Math.PI / 2].map((r) => (
+              <mesh key={r} position={[cx, 3.95, l.z]} rotation={[0, r, dir * -lean]} material={beamMat}>
+                <planeGeometry args={[2.0, Math.hypot(BEAM_LEAN, 7.9)]} />
+              </mesh>
+            ))}
+            {/* where it lands */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[l.x + dir * BEAM_LEAN, 0.03, l.z]} material={patchMat}>
+              <planeGeometry args={[3.4, 4.6]} />
+            </mesh>
+          </group>
+        );
+      })}
+      <points ref={dust} geometry={dustGeo} material={dustMat} />
     </group>
   );
 }
@@ -476,6 +609,17 @@ function getSoftDisc() {
   return softDisc;
 }
 
+/** The stands' fixed surfaces, blended night → day once for every case (the Hall updates them each frame). */
+let standMats: { all: CityMaterials; toe: THREE.MeshStandardMaterial; body: THREE.MeshStandardMaterial; lip: THREE.MeshStandardMaterial; edge: THREE.LineBasicMaterial; glassEdge: THREE.LineBasicMaterial; rim: THREE.LineBasicMaterial } | null = null;
+function getStandMats() {
+  if (!standMats) {
+    const m = new CityMaterials();
+    // night: dark plinths, cool edges. Day: pale stone, a soft violet pencil line
+    standMats = { all: m, toe: m.std("#0b0d13", "#d4cfea", 1), body: m.std("#181c26", "#f3f0fc", 0.85), lip: m.std("#202531", "#ffffff", 0.55), edge: m.line(0.3), glassEdge: m.line(0.45), rim: m.line(0.5) };
+  }
+  return standMats;
+}
+
 export function Exhibit({
   z,
   side,
@@ -540,6 +684,30 @@ export function Exhibit({
     [CASE_W, CASE_D]
   );
   const soft = getSoftDisc();
+  const sm = getStandMats();
+  // per-case surfaces that depend on the case's own accent or focus
+  const litEdge = useMemo(() => new THREE.LineBasicMaterial({ color: accent, transparent: true }), [accent]);
+  const glass = useMemo(() => new THREE.MeshStandardMaterial({ transparent: true, roughness: 0.4 }), []);
+  const shadow = useMemo(() => new THREE.MeshBasicMaterial({ map: getSoftDisc(), color: "#000000", transparent: true, depthWrite: false }), []);
+  const accentNight = useMemo(() => new THREE.Color(accent), [accent]);
+  const accentDay = useMemo(() => new THREE.Color(accent).lerp(new THREE.Color("#1a1240"), 0.5), [accent]);
+  const inlay = useMemo(() => new THREE.MeshBasicMaterial({ color: accent, transparent: true, toneMapped: false }), [accent]);
+  const glassNight = useMemo(() => new THREE.Color("#20242e"), []);
+  const glassDay = useMemo(() => new THREE.Color("#b9b0e6"), []);
+  const shadowNight = useMemo(() => new THREE.Color("#000000"), []);
+  const shadowDay = useMemo(() => new THREE.Color("#2a1f6b"), []);
+  useFrame(() => {
+    const t = tod();
+    litEdge.color.lerpColors(accentNight, accentDay, t);
+    litEdge.opacity = 1;
+    glass.color.lerpColors(glassNight, glassDay, t);
+    if (lit) glass.color.lerpColors(accentNight, accentDay, t);
+    glass.opacity = (video ? (lit ? 0.06 : 0.04) : lit ? 0.2 : 0.07) * (1 + 0.8 * t);
+    shadow.color.lerpColors(shadowNight, shadowDay, t);
+    shadow.opacity = 0.55 - 0.3 * t;
+    inlay.color.lerpColors(accentNight, accentDay, t);
+    inlay.opacity = lit ? 1 : 0.5;
+  });
 
   return (
     <group
@@ -594,44 +762,41 @@ export function Exhibit({
 
           {/* contact shadow: the case sits on the floor, softly */}
           {soft ? (
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 0]}>
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 0]} material={shadow}>
               <planeGeometry args={[PLINTH_W + 1.6, CASE_D + 1.8]} />
-              <meshBasicMaterial map={soft} color="#000000" transparent opacity={0.55} depthWrite={false} />
             </mesh>
           ) : null}
           {/* toe: recessed band at the floor, so the plinth reads as standing */}
-          <mesh position={[0, 0.08, 0]}>
+          <mesh position={[0, 0.08, 0]} material={sm.toe}>
             <boxGeometry args={[PLINTH_W - 0.18, 0.16, CASE_D + 0.02]} />
-            <meshStandardMaterial color="#0b0d13" roughness={1} />
           </mesh>
-          <mesh position={[0, 0.16 + BODY_H / 2, 0]}>
+          <mesh position={[0, 0.16 + BODY_H / 2, 0]} material={sm.body}>
             <boxGeometry args={[PLINTH_W, BODY_H, CASE_D + 0.2]} />
-            <meshStandardMaterial color="#181c26" roughness={0.9} />
           </mesh>
-          <lineSegments geometry={plinthEdges} position={[0, 0.16 + BODY_H / 2, 0]}>
-            <lineBasicMaterial color="#c9d2e6" transparent opacity={0.3} />
-          </lineSegments>
+          <lineSegments geometry={plinthEdges} position={[0, 0.16 + BODY_H / 2, 0]} material={sm.edge} />
           {/* lip: a slightly wider cap the glass sits on */}
-          <mesh position={[0, 1.385, 0]}>
+          <mesh position={[0, 1.385, 0]} material={sm.lip}>
             <boxGeometry args={[PLINTH_W + 0.12, 0.05, CASE_D + 0.32]} />
-            <meshStandardMaterial color="#202531" roughness={0.6} />
           </mesh>
-          <lineSegments geometry={lipEdges} position={[0, 1.385, 0]}>
-            <lineBasicMaterial color={lit ? accent : "#c9d2e6"} transparent opacity={lit ? 0.85 : 0.35} />
-          </lineSegments>
+          <lineSegments geometry={lipEdges} position={[0, 1.385, 0]} material={lit ? litEdge : sm.edge} />
 
-          <mesh position={[0, 2.9, 0]}>
-            <boxGeometry args={[CASE_W, 3, CASE_D]} />
-            {/* a case with a screen keeps its glass clear, so the demo reads */}
-            <meshStandardMaterial color={lit ? accent : "#20242e"} transparent opacity={video ? (lit ? 0.06 : 0.04) : lit ? 0.2 : 0.07} roughness={0.4} />
+          {/* slim corner posts: the glass is a framed vitrine, not a wireframe */}
+          {[-1, 1].flatMap((ix) => [-1, 1].map((iz) => (
+            <mesh key={`${ix}${iz}`} position={[ix * (CASE_W / 2 - 0.07), 2.9, iz * (CASE_D / 2 - 0.07)]} material={lit ? litEdge : sm.glassEdge}>
+              <boxGeometry args={[0.05, 3, 0.05]} />
+            </mesh>
+          )))}
+          {/* a thin inlay of the project's colour around the plinth, lit when the case is in focus */}
+          <mesh position={[0, 0.16 + BODY_H * 0.78, 0]} material={inlay}>
+            <boxGeometry args={[PLINTH_W + 0.012, 0.035, CASE_D + 0.212]} />
           </mesh>
-          <lineSegments geometry={glassEdges} position={[0, 2.9, 0]}>
-            <lineBasicMaterial color={lit ? accent : "#c9d2e6"} transparent opacity={lit ? 1 : 0.45} />
-          </lineSegments>
+          {/* a case with a screen keeps its glass clear, so the demo reads */}
+          <mesh position={[0, 2.9, 0]} material={glass}>
+            <boxGeometry args={[CASE_W, 3, CASE_D]} />
+          </mesh>
+          <lineSegments geometry={glassEdges} position={[0, 2.9, 0]} material={lit ? litEdge : sm.glassEdge} />
           {/* the glass's top rim catches the light a little more than its sides */}
-          <lineSegments geometry={glassTop} position={[0, 4.401, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <lineBasicMaterial color="#eef2ff" transparent opacity={lit ? 0.9 : 0.5} />
-          </lineSegments>
+          <lineSegments geometry={glassTop} position={[0, 4.401, 0]} rotation={[-Math.PI / 2, 0, 0]} material={lit ? litEdge : sm.rim} />
 
           {/* the end panel would cut a strip across a screen: only screenless cases keep it */}
           {video ? null : (
@@ -803,50 +968,67 @@ function readFont(varName: string, fallback: string) {
   return v || fallback;
 }
 function Plaque({ title, meta, accent, lit }: { title: string; meta: string; accent: string; lit: boolean }) {
-  const [tex, setTex] = useState<THREE.CanvasTexture | null>(null);
+  // two engraved plates, one per hour: a dark plate with pale lettering by night, a paper plate with ink by day
+  const [tex, setTex] = useState<{ night: THREE.CanvasTexture; day: THREE.CanvasTexture } | null>(null);
+  const plate = useRef<THREE.MeshBasicMaterial>(null);
   useEffect(() => {
     let alive = true;
-    let made: THREE.CanvasTexture | null = null;
+    const made: THREE.CanvasTexture[] = [];
     document.fonts.ready.then(() => {
       if (!alive) return;
       const W = 1040;
       const H = Math.round((W * PLATE_H) / PLATE_W);
-      const c = document.createElement("canvas");
-      c.width = W;
-      c.height = H;
-      const g = c.getContext("2d");
-      if (!g) return;
-      // brushed-dark plate with a hairline border
-      g.fillStyle = "#0e1118";
-      g.fillRect(0, 0, W, H);
-      g.strokeStyle = "rgba(201, 210, 230, 0.28)";
-      g.lineWidth = 3;
-      g.strokeRect(6, 6, W - 12, H - 12);
-      const sans = readFont("--font-geist-sans", "system-ui, sans-serif");
-      const mono = readFont("--font-geist-mono", "ui-monospace, monospace");
-      g.textAlign = "center";
-      g.textBaseline = "middle";
-      g.fillStyle = "#e9ecf5";
-      let size = 76;
-      g.font = `600 ${size}px ${sans}`;
-      while (g.measureText(title).width > W - 120 && size > 40) {
-        size -= 4;
+      const draw = (look: { bg: string; border: string; ink: string; sub: string }) => {
+        const c = document.createElement("canvas");
+        c.width = W;
+        c.height = H;
+        const g = c.getContext("2d");
+        if (!g) return null;
+        g.fillStyle = look.bg;
+        g.fillRect(0, 0, W, H);
+        g.strokeStyle = look.border;
+        g.lineWidth = 3;
+        g.strokeRect(6, 6, W - 12, H - 12);
+        const sans = readFont("--font-geist-sans", "system-ui, sans-serif");
+        const mono = readFont("--font-geist-mono", "ui-monospace, monospace");
+        g.textAlign = "center";
+        g.textBaseline = "middle";
+        g.fillStyle = look.ink;
+        let size = 76;
         g.font = `600 ${size}px ${sans}`;
-      }
-      g.fillText(title, W / 2, H * 0.42);
-      g.fillStyle = "rgba(201, 210, 230, 0.62)";
-      g.font = `400 34px ${mono}`;
-      g.fillText(meta.toUpperCase(), W / 2, H * 0.76);
-      made = new THREE.CanvasTexture(c);
-      made.colorSpace = THREE.SRGBColorSpace;
-      made.anisotropy = 4;
-      setTex(made);
+        while (g.measureText(title).width > W - 120 && size > 40) {
+          size -= 4;
+          g.font = `600 ${size}px ${sans}`;
+        }
+        g.fillText(title, W / 2, H * 0.42);
+        g.fillStyle = look.sub;
+        g.font = `400 34px ${mono}`;
+        g.fillText(meta.toUpperCase(), W / 2, H * 0.76);
+        const t = new THREE.CanvasTexture(c);
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.anisotropy = 4;
+        made.push(t);
+        return t;
+      };
+      const night = draw({ bg: "#0e1118", border: "rgba(201, 210, 230, 0.28)", ink: "#e9ecf5", sub: "rgba(201, 210, 230, 0.62)" });
+      const day = draw({ bg: "#fbfaff", border: "rgba(26, 18, 64, 0.35)", ink: "#1a1240", sub: "rgba(26, 18, 64, 0.62)" });
+      if (night && day) setTex({ night, day });
     });
     return () => {
       alive = false;
-      made?.dispose();
+      made.forEach((t) => t.dispose());
     };
   }, [title, meta]);
+
+  useFrame(() => {
+    const m = plate.current;
+    if (!m || !tex) return;
+    const map = tod() > 0.5 ? tex.day : tex.night;
+    if (m.map !== map) {
+      m.map = map;
+      m.needsUpdate = true;
+    }
+  });
 
   if (!title) return null;
   return (
@@ -856,9 +1038,10 @@ function Plaque({ title, meta, accent, lit }: { title: string; meta: string; acc
         {/* keyed: three builds a material's shader once, so one made before
             the texture existed would never pick the texture up */}
         <meshBasicMaterial
+          ref={plate}
           key={tex ? "engraved" : "blank"}
-          map={tex}
-          color={tex ? (lit ? "#ffffff" : "#8a8f9c") : "#1a1e28"}
+          map={tex ? tex.night : null}
+          color={tex ? (lit ? "#ffffff" : "#c9ccd6") : "#1a1e28"}
           toneMapped={false}
         />
       </mesh>

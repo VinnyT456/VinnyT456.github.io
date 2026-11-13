@@ -8,6 +8,7 @@ import {
   subscribeHandoffComplete,
 } from "@/lib/intro";
 import { useReducedMotion } from "@/lib/media";
+import { useTheme } from "@/lib/theme";
 
 let colorProbe: CanvasRenderingContext2D | null = null;
 
@@ -125,6 +126,7 @@ function makeMaterial() {
       uReduced: { value: 0 },
       uFade: { value: 0 },
       uIntensity: { value: 1 },
+      uPaper: { value: 0 },
       uBoost: { value: 0 },
       uScroll: { value: 0 },
       uAspect: { value: 1 },
@@ -140,6 +142,7 @@ function makeMaterial() {
       uniform float uReduced;
       uniform float uFade;
       uniform float uIntensity;
+      uniform float uPaper;
       // 0..1 — lifts the dim floor and size so the sky is actually visible.
       uniform float uBoost;
       // Eased page scroll in viewport heights (home only; 0 elsewhere).
@@ -184,7 +187,7 @@ function makeMaterial() {
         float alpha;
         if (aKind > 0.5) {
           size = aSize;
-          alpha = 0.06 * (1.0 + 0.6 * uBoost);
+          alpha = 0.06 * (1.0 + 0.6 * uBoost) * mix(1.0, 1.4, uPaper);
         } else {
           size = max(aSize * mix(1.45, 0.6, depth01) * (1.0 + bright * 1.6) * (1.0 + 0.9 * uBoost), 1.6);
           float scintillate = sin(t * (0.6 + aSeed) + aSeed * 50.0) * sin(t * 0.37 + aSeed * 17.0);
@@ -194,7 +197,9 @@ function makeMaterial() {
         }
         gl_PointSize = size * uPixelRatio;
 
-        vAlpha = alpha * uFade * uIntensity;
+        // by day the same sky, inked violet: dark dots on paper read a touch
+        // heavier than light ones on night, so they're eased back slightly
+        vAlpha = alpha * uFade * uIntensity * mix(1.0, 0.85, uPaper);
         vBright = bright;
         vDepth = depth01;
         vKind = aKind;
@@ -256,8 +261,9 @@ function intensityForPath(pathname: string): number {
 }
 
 function applyParticleColors(material: THREE.ShaderMaterial) {
+  material.uniforms.uPaper.value = document.documentElement.dataset.theme === "light" ? 1 : 0;
   material.uniforms.uColorNear.value.set(cssHex("--particle", "#8b8bff"));
-  material.uniforms.uColorFar.value.set("#5b7bd6");
+  material.uniforms.uColorFar.value.set(cssHex("--particle-far", "#5b7bd6"));
 }
 
 export default function ParticleBackdrop() {
@@ -271,6 +277,12 @@ export default function ParticleBackdrop() {
   const intensity = intensityForPath(pathname);
   const intensityRef = useRef(intensity);
   const kickRef = useRef<() => void>(() => {});
+  // the sky re-inks when the theme flips (stars at night, graphite dust by day)
+  const theme = useTheme();
+  const recolorRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    recolorRef.current();
+  }, [theme]);
 
   useEffect(() => {
     reducedRef.current = reduced;
@@ -440,6 +452,10 @@ export default function ParticleBackdrop() {
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("workshop:party", onParty);
     document.addEventListener("visibilitychange", onVisibility);
+    recolorRef.current = () => {
+      applyParticleColors(material);
+      kickRef.current();
+    };
     kickRef.current = start;
     resize();
 

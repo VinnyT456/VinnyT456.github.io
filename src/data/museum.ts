@@ -82,6 +82,9 @@ export type Exhibit = {
   stations: InformationStation[];
   technical?: TechnicalSpec;
   demo?: DemoSpec;
+  /** Public repo name under github.com/VinnyT456: live stats (last push,
+   *  commits, language) come from the API by this name. Absent = no stats. */
+  repo?: string;
   /** The project's demo recording: a folder under public/projects/demos made by
    *  `npm run demos`, holding demo.mp4 (the room), loop.mp4 (its gallery case)
    *  and poster.webp (the case's still, the room's first frame). */
@@ -152,6 +155,7 @@ const site0 = site.projects[0];
 export const exhibits: Exhibit[] = [
   {
     id: "Genshin Combat Optimizer",
+    repo: "Genshin-Combat-Optimizer",
     video: "/projects/demos/genshin-combat-optimizer",
     title: "Genshin Combat Optimizer",
     year: "2026",
@@ -193,13 +197,14 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "This site",
+    repo: "VinnyT456.github.io",
     video: "/projects/demos/personal_portfolio",
     title: site0?.title ?? "Personal Portfolio",
     year: site0?.year ?? "2026",
     category: "Web · Interactive 3D",
     description:
       site0?.description ??
-      "A dark, interactive portfolio. The page is the demo, not a screenshot of one.",
+      "An interactive portfolio, night by default. The page is the demo, not a screenshot of one.",
     technologies: site0?.tags ?? ["Next.js", "Three.js", "WebGL"],
     href: site0?.href || undefined,
     exhibitType: "interactive_demo",
@@ -233,6 +238,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "Genshin Rhythm Autoplayer",
+    repo: "genshin-rhythm-autoplayer",
     video: "/projects/demos/genshin_rhythm_autoplayer",
     title: "Genshin Rhythm Autoplayer",
     year: "2026",
@@ -262,6 +268,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "Genshin Lyre Autoplayer",
+    repo: "genshin-lyre-autoplayer",
     video: "/projects/demos/genshin_lyre_auto_player",
     title: "Genshin Lyre Autoplayer",
     year: "2026",
@@ -320,6 +327,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "CS Internship Bot",
+    repo: "CS-Internship-Bot",
     video: "/projects/demos/cs_internship_bot",
     title: "CS Internship Bot",
     year: "2026",
@@ -355,6 +363,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "Exploding Kittens",
+    repo: "Exploding-Kittens",
     video: "/projects/demos/exploding_kitten",
     title: "Exploding Kittens",
     year: "2026",
@@ -396,6 +405,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "Treasure Hunt",
+    repo: "treasure-hunt",
     video: "/projects/demos/treasure_hunt",
     title: "Treasure Hunt",
     year: "2026",
@@ -425,6 +435,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "ChestMNIST Classifier",
+    repo: "chestmnist-multilabel-classifier",
     video: "/projects/demos/chestmnist-multilabel-classifier",
     title: "ChestMNIST Classifier",
     year: "2026",
@@ -471,6 +482,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "Paralytica",
+    repo: "Wildhacks-2026",
     video: "/projects/demos/paralytica",
     title: "Paralytica",
     year: "2026",
@@ -505,6 +517,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "CareCompass",
+    repo: "CareCompass",
     video: "/projects/demos/CareCompass",
     title: "CareCompass",
     year: "2026",
@@ -538,6 +551,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "SmartGraph Builder",
+    repo: "SmartGraph-Builder",
     video: "/projects/demos/SmartGraph_Builder",
     title: "SmartGraph Builder",
     year: "2025",
@@ -566,6 +580,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "CommentGuard",
+    repo: "CommentGuard",
     video: "/projects/demos/CommentGuard",
     title: "CommentGuard",
     year: "2025",
@@ -594,6 +609,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "RL Agents",
+    repo: "mountain-car-rl-agent",
     video: "/projects/demos/rl_project",
     title: "RL Agents",
     year: "2025",
@@ -629,6 +645,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "15-112 Sudoku",
+    repo: "15-112-Sudoku",
     video: "/projects/demos/sudoku",
     title: "15-112 Sudoku",
     year: "2024",
@@ -657,6 +674,7 @@ export const exhibits: Exhibit[] = [
   },
   {
     id: "Rubik's Cube Solver",
+    repo: "Rubiks-Cube-Solver",
     video: "/projects/demos/rubiks_cube_solver",
     title: "Rubik's Cube Solver",
     year: "2024",

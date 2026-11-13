@@ -48,9 +48,13 @@ export function experienceFileName(exp: ExperienceFloor, index: number): string 
  * `label` is the file header line (e.g. "experience/01-...").
  */
 export function renderExperience(exp: ExperienceFloor, label: string): Line[] {
+  return experienceLines(exp, label).map((l) => (l.text.startsWith("  ") && !l.mono && l.hang === undefined ? { ...l, hang: 2 } : l));
+}
+
+function experienceLines(exp: ExperienceFloor, label: string): Line[] {
   const lines: Line[] = [];
   lines.push({ text: label, tone: "muted" });
-  lines.push({ text: rule() });
+  lines.push({ text: rule(), mono: true, art: true });
   lines.push({ text: "" });
 
   // title (role) as the document heading
@@ -102,7 +106,7 @@ export function renderExperience(exp: ExperienceFloor, label: string): Line[] {
   }
 
   lines.push({ text: "" });
-  lines.push({ text: rule() });
+  lines.push({ text: rule(), mono: true, art: true });
   return lines;
 }
 
@@ -206,6 +210,27 @@ function projectDir(p: Exhibit): FsDir {
   return { type: "dir", name: slug, children };
 }
 
+/** The shell's aliases (`alias` lists them; ~/.zshrc is where they'd live). */
+export const ALIASES: Record<string, string> = { ll: "ls -l", la: "ls -la", l: "ls -1" };
+
+/** A dotfile for `ls -a`: the settings this shell really runs with, to read (nothing sources it). */
+function zshrcFile(): FsFile {
+  return {
+    type: "file",
+    name: ".zshrc",
+    render: () =>
+      [
+        "# ~/.zshrc: what this shell runs with. read-only; nothing sources it.",
+        "",
+        ...Object.entries(ALIASES).map(([k, v]) => `alias ${k}='${v}'`),
+        "",
+        "setopt nomatch        # a glob that matches nothing is an error",
+        "setopt hist_ignore_dups  # a command repeated right away is saved once",
+        "setopt noclobber      # and nothing here can be written anyway",
+      ].map((text): Line => ({ text, mono: true, tone: text.startsWith("#") ? "muted" : undefined })),
+  };
+}
+
 function aboutFile(): FsFile {
   return {
     type: "file",
@@ -259,8 +284,8 @@ function readmeFile(): FsFile {
       { text: "  about.txt      who I am        (cat about.txt)" },
       { text: "  experience/    work history    (cd experience)" },
       { text: "  projects/      things I built  (cd projects)" },
-      { text: "  skills/        the toolbox     (cat skills.txt)" },
-      { text: "  resume.pdf     the résumé       (open resume.pdf)" },
+      { text: "  skills.txt     the toolbox     (cat skills.txt)" },
+      { text: "  resume.pdf     the résumé      (open resume.pdf)" },
       { text: "" },
       { text: 'Type "help" for every command, or "tree" for the layout.', tone: "muted" },
     ],
@@ -301,6 +326,7 @@ export const root: FsDir = {
           type: "dir",
           name: "vincent",
           children: [
+            zshrcFile(),
             aboutFile(),
             { type: "dir", name: "experience", children: experienceFiles },
             { type: "dir", name: "projects", children: projectDirs },
@@ -397,7 +423,8 @@ export function walk(
   const out: { rel: string; node: FsNode }[] = [{ rel: relPrefix, node }];
   if (node.type === "dir") {
     for (const child of node.children) {
-      const childRel = relPrefix === "." ? child.name : `${relPrefix}/${child.name}`;
+      // like find and grep -r: under ".", paths read ./name
+      const childRel = relPrefix.endsWith("/") ? `${relPrefix}${child.name}` : `${relPrefix}/${child.name}`; // no // from / or projects/
       out.push(...walk(child, childRel));
     }
   }
@@ -504,8 +531,13 @@ export function findSkill(
 export const EXTERNAL_LINKS: Record<string, { label: string; href: string }> = {
   github: { label: "GitHub", href: site.github },
   email: { label: "Email", href: `mailto:${site.email}` },
-  resume: { label: "Résumé", href: "/resume" },
+  // the same PDF `resume` and `open resume.pdf` open; the page is `open resume-page`
+  resume: { label: "resume.pdf", href: site.resume.pdf || "/resume" },
+  "resume-page": { label: "Résumé", href: "/resume" },
   projects: { label: "Projects", href: "/projects" },
-  about: { label: "About", href: "/about" },
+  experience: { label: "Experience", href: "/experience" },
   skills: { label: "Skills", href: "/skills" },
+  notes: { label: "Notes", href: "/notes" },
+  contact: { label: "Contact", href: "/contact" },
+  about: { label: "About", href: "/about" },
 };

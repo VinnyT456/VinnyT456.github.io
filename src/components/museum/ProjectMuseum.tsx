@@ -1,15 +1,23 @@
 "use client";
 
+import { useTimeOfDayTarget } from "./three/timeOfDay";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { exhibits, exhibitSlug } from "@/data/museum";
+import { api, postJSON, warmApi } from "@/lib/api";
 import { useReducedMotion } from "@/lib/media";
+import type { RepoStats } from "@/lib/repos";
+import { timeAgo } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import GalleryScene from "./three/GalleryScene";
 import MuseumScene from "./three/MuseumScene";
 import ProjectRoom from "./ProjectRoom";
+import VisitorBook, { VisitorBookLabel } from "./VisitorBook";
 import { Icon } from "@/components/icons";
 
 const N = exhibits.length;
+/** the walk is the project list, in its own order */
+const tour = exhibits.map((_, i) => i);
+const stopOf = (exhibit: number) => exhibit;
 
 type Stage = "INTRO" | "GALLERY" | "ENTERING" | "WORLD" | "EXITING";
 
@@ -32,9 +40,14 @@ export default function ProjectMuseum({
   returnTo?: { href: string; label: string } | null;
 }) {
   const reduced = useReducedMotion();
+  // the museum has a time of day, set by the theme (see three/timeOfDay.ts)
+  useTimeOfDayTarget();
   const deep = initialExhibit != null && initialExhibit >= 0 && initialExhibit < N ? initialExhibit : null;
   const [stage, setStage] = useState<Stage>(deep != null ? "WORLD" : "INTRO");
-  const [active, setActive] = useState(deep ?? 0); // exhibit in focus in the hall
+  // the walk: every exhibit, in order
+  const stops = tour;
+  const M = stops.length;
+  const [active, setActive] = useState(deep != null ? Math.max(0, stopOf(deep)) : 0); // stop in focus in the hall
   const [selected, setSelected] = useState<number | null>(deep); // exhibit being entered
   // the hidden gallery has drawn its first frames (the walk waits on this)
   const [galleryReady, setGalleryReady] = useState(false);
@@ -45,15 +58,16 @@ export default function ProjectMuseum({
   const onWalkStart = useCallback(() => setWalking(true), []);
 
   // Scroll position along the hall (0..1), read by the gallery camera rig.
-  const progress = useRef(deep != null && N > 1 ? deep / (N - 1) : 0);
+  const progress = useRef(deep != null && M > 1 ? Math.max(0, stopOf(deep)) / (M - 1) : 0);
   const gScrollerRef = useRef<HTMLDivElement>(null);
   // "Scroll to wander" steps away once the visitor has scrolled a little
   const [wandered, setWandered] = useState(false);
 
   // Clamp so a stale index (e.g. after the exhibit list changes) never dereferences
   // past the end of the array.
-  const safeActive = Math.min(Math.max(0, active), N - 1);
-  const activeEx = exhibits[safeActive];
+  const safeActive = Math.min(Math.max(0, active), M - 1);
+  const activeEx = exhibits[stops[safeActive]];
+  const nextEx = exhibits[stops[Math.min(M - 1, safeActive + 1)]];
 
   const scrollPin = useRef<{ y: number; progress: number; until: number } | null>(null);
   const pinRaf = useRef(0);
@@ -118,7 +132,7 @@ export default function ProjectMuseum({
         const p = total > 0 ? Math.min(1, Math.max(0, window.scrollY / total)) : 0;
         progress.current = p;
         if (window.scrollY > 40) setWandered(true);
-        setActive(Math.round(p * (N - 1)));
+        setActive(Math.round(p * (M - 1)));
       });
     };
     onScroll();
@@ -129,7 +143,7 @@ export default function ProjectMuseum({
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
     };
-  }, [stage]);
+  }, [stage, M]);
 
   useEffect(() => {
     return () => cancelAnimationFrame(pinRaf.current);
@@ -140,36 +154,75 @@ export default function ProjectMuseum({
     const scroller = gScrollerRef.current;
     if (!scroller) return;
     const total = scroller.offsetHeight - window.innerHeight;
-    const y = (Math.min(Math.max(0, i), N - 1) / Math.max(1, N - 1)) * total;
+    const y = (Math.min(Math.max(0, i), M - 1) / Math.max(1, M - 1)) * total;
     window.scrollTo({ top: y, behavior: reduced ? "auto" : "smooth" });
-  }, [reduced]);
+  }, [reduced, M]);
 
   // Enter the focused exhibit: the camera has glided to it; fade into its world.
   const enter = useCallback(
-    (index: number) => {
-      if (stage !== "GALLERY") return;
-      setSelected(index);
+    (stopIndex: number) => {
+      if (stage !== "GALLERY" || stops[stopIndex] == null) return;
+      setSelected(stops[stopIndex]);
       setStage("ENTERING");
       const ms = reduced ? 0 : 620;
       window.setTimeout(() => setStage("WORLD"), ms);
     },
-    [stage, reduced]
+    [stage, reduced, stops]
   );
 
   // Floor plan: jump from the index straight into any exhibit's room — its
   // stand is set first so leaving the room lands you beside it.
   const [indexOpen, setIndexOpen] = useState(false);
+  // the visitor book opens from anywhere in the museum (hall rail, any room)
+  const [bookOpen, setBookOpen] = useState(false);
+  const openBook = useCallback(() => setBookOpen(true), []);
+  // start waking the API during the walk, so the book's names are ready
+  useEffect(() => warmApi(), []);
+
+  // "1,204 people stepped inside": per-exhibit counts from the API. Missing
+  // (asleep, down, not configured) just means the plaques don't show a count.
+  const [views, setViews] = useState<Record<string, number>>({});
+  useEffect(() => {
+    let alive = true;
+    api<{ counts: Record<string, number> }>("/views", { timeoutMs: 75_000 })
+      .then((r) => alive && setViews((v) => ({ ...r?.counts, ...v })))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  // live repo numbers (last push, commits) for exhibits with a public repo
+  const [repos, setRepos] = useState<Record<string, RepoStats>>({});
+  useEffect(() => {
+    let alive = true;
+    api<{ repos: Record<string, RepoStats> }>("/github/repos", { timeoutMs: 75_000 })
+      // a malformed answer shows no numbers rather than crashing the room
+      .then((r) => alive && setRepos(r?.repos ?? {}))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  // stepping into a room is a visit (the server counts a person once a day)
+  useEffect(() => {
+    if (stage !== "WORLD" || selected == null) return;
+    const slug = exhibitSlug(exhibits[selected]);
+    api<{ count: number }>(`/views/${slug}`, postJSON({}, 75_000))
+      .then((r) => setViews((v) => ({ ...v, [slug]: r.count })))
+      .catch(() => {});
+  }, [stage, selected]);
   const openExhibit = useCallback(
     (index: number) => {
       if (stage !== "GALLERY") return;
       setIndexOpen(false);
-      setActive(index);
-      progress.current = N > 1 ? index / (N - 1) : 0;
+      const at = Math.max(0, stopOf(index));
+      setActive(at);
+      progress.current = M > 1 ? at / (M - 1) : 0;
       setSelected(index);
       setStage("ENTERING");
       window.setTimeout(() => setStage("WORLD"), reduced ? 0 : 620);
     },
-    [stage, reduced]
+    [stage, reduced, M]
   );
 
   // Move to an adjacent project WITHOUT leaving the room — a quick accent wipe,
@@ -177,9 +230,9 @@ export default function ProjectMuseum({
   const [roomSwap, setRoomSwap] = useState(false);
   const goProject = useCallback(
     (index: number) => {
-      const clamped = Math.min(Math.max(0, index), exhibits.length - 1);
-      if (clamped === selected) return;
-      setActive(clamped);
+      if (selected == null || index === selected || !exhibits[index]) return;
+      const clamped = index;
+      setActive(Math.max(0, stopOf(clamped)));
       if (reduced) {
         setSelected(clamped);
         return;
@@ -195,14 +248,15 @@ export default function ProjectMuseum({
 
   // Leave the world: back to the 3D gallery, focused on the same exhibit.
   const exit = useCallback(() => {
-    // A deep-linked room (?exhibit=) shouldn't reopen on reload once you leave it.
-    if (window.location.search) {
-      window.history.replaceState(null, "", window.location.pathname);
+    // The hall's own address: a reload after leaving lands in the gallery,
+    // not back in the room (drops /projects/<slug> and ?exhibit= alike).
+    if (window.location.pathname !== "/projects" || window.location.search) {
+      window.history.replaceState(null, "", "/projects");
     }
     // Land the gallery on the exhibit you were in, even if you arrived by deep
     // link or stepped between rooms with prev/next.
-    const at = selected ?? active;
-    const landProgress = N > 1 ? at / (N - 1) : 0;
+    const at = selected != null ? Math.max(0, stopOf(selected)) : active;
+    const landProgress = M > 1 ? at / (M - 1) : 0;
     setActive(at);
     progress.current = landProgress;
     setStage("EXITING");
@@ -230,11 +284,11 @@ export default function ProjectMuseum({
         requestAnimationFrame(() => engageScrollPin(landProgress, reduced ? 400 : 800))
       );
     }, ms);
-  }, [reduced, selected, active, engageScrollPin]);
+  }, [reduced, selected, active, M, engageScrollPin]);
 
   // Keyboard: ← / → walk between exhibits, Enter opens the focused one.
   useEffect(() => {
-    if (stage !== "GALLERY" || indexOpen) return;
+    if (stage !== "GALLERY" || indexOpen || bookOpen) return;
     const onKey = (e: KeyboardEvent) => {
       // A focused control keeps its own keys: Enter on "Floor plan", an arrow
       // button or a dot must press THAT control, not open the current exhibit.
@@ -250,20 +304,19 @@ export default function ProjectMuseum({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [stage, indexOpen, active, safeActive, enter, scrollToExhibit]);
+  }, [stage, indexOpen, bookOpen, active, safeActive, enter, scrollToExhibit]);
 
-  // A room opened by link (?exhibit=) keeps its address in step with
-  // prev/next, so a reload or a shared link lands on the project actually on
-  // screen. Rooms entered from the hall leave the URL alone (adding the param
-  // would also turn on the deep link's "Exit to …"). Leaving clears it (exit).
+  // An open room shows its shareable address, /projects/<slug> (the one with
+  // its own link card), in step with prev/next — so copying the URL, or
+  // reloading, lands on the project actually on screen. `from`/`tool` ride
+  // along so "Exit to Skills" survives a reload. Leaving restores /projects.
   useEffect(() => {
     if (stage !== "WORLD" || selected == null) return;
+    const path = `/projects/${exhibitSlug(exhibits[selected])}`;
     const url = new URL(window.location.href);
-    const current = url.searchParams.get("exhibit");
-    const slug = exhibitSlug(exhibits[selected]);
-    if (!current || current === slug) return;
-    url.searchParams.set("exhibit", slug);
-    window.history.replaceState(window.history.state, "", url);
+    url.searchParams.delete("exhibit");
+    if (url.pathname === path && !window.location.search.includes("exhibit=")) return;
+    window.history.replaceState(null, "", `${path}${url.search}`);
   }, [stage, selected]);
 
   // While a room is open it behaves as a modal: the site chrome behind it (nav
@@ -316,13 +369,14 @@ export default function ProjectMuseum({
           {/* Tall scroller: one snap stop per exhibit; scrolling walks the camera. */}
           {stage === "GALLERY" ? (
             <div ref={gScrollerRef} className="gallery-scroller" aria-hidden>
-              {exhibits.map((ex, i) => (
-                <div key={ex.id} className="gallery-scroller__snap" data-exhibit={i} />
+              {stops.map((ei, i) => (
+                <div key={exhibits[ei].id} className="gallery-scroller__snap" data-exhibit={i} />
               ))}
             </div>
           ) : null}
 
           <GalleryScene
+            order={stops}
             progress={progress}
             active={safeActive}
             preload={preloading}
@@ -333,7 +387,6 @@ export default function ProjectMuseum({
           {/* Step-inside veil: on ENTERING, the focused case's accent rushes out
               from the centre and the hall dims, handing off to the world portal. */}
           {stage === "ENTERING" ? <div className="gallery-enter-veil" aria-hidden /> : null}
-
           {/* --- Overlay (plaque, controls) --- */}
           {preloading ? null : (
           <>
@@ -359,9 +412,10 @@ export default function ProjectMuseum({
             <p className="gallery-plaque__no" aria-live="polite">
               {/* the position lives once, in the rail below; screen readers still
                   hear it here as you walk */}
-              <span className="sr-only">Exhibit {safeActive + 1} of {exhibits.length}. </span>
+              <span className="sr-only">Exhibit {safeActive + 1} of {M}. </span>
               {activeEx.year} · {activeEx.category}
             </p>
+            <LiveLine visits={views[exhibitSlug(activeEx)]} repo={repos[exhibitSlug(activeEx)]} />
             <p className="gallery-plaque__desc">
               <Placeholder>{activeEx.description}</Placeholder>
             </p>
@@ -411,6 +465,18 @@ export default function ProjectMuseum({
               <Icon name="grid" size={16} aria-hidden />
               <span className="gallery-rail__plan-label">Floor plan</span>
             </button>
+            <button
+              type="button"
+              className="gallery-rail__plan gallery-rail__book"
+              onClick={openBook}
+              aria-haspopup="dialog"
+            >
+              <Icon name="book" size={16} aria-hidden />
+              {/* icon-only on phones, but still the button's name */}
+              <span className="gallery-rail__book-label">
+                <VisitorBookLabel />
+              </span>
+            </button>
 
             <div className="gallery-rail__walk">
               <button
@@ -423,34 +489,34 @@ export default function ProjectMuseum({
                 ←
               </button>
               <span className="gallery-rail__count font-mono" aria-hidden>
-                <span className="gallery-rail__count-now">{safeActive + 1}</span> / {N}
+                <span className="gallery-rail__count-now">{safeActive + 1}</span> / {M}
               </span>
               <button
                 type="button"
                 className="gallery-rail__arrow"
                 onClick={() => scrollToExhibit(safeActive + 1)}
-                disabled={safeActive === N - 1}
+                disabled={safeActive === M - 1}
                 aria-label="Next exhibit"
               >
                 →
               </button>
             </div>
 
-            {safeActive < N - 1 ? (
+            {safeActive < M - 1 ? (
               <button type="button" className="gallery-rail__next" onClick={() => scrollToExhibit(safeActive + 1)}>
                 <span className="gallery-rail__next-label">Next:</span>
                 <span className="gallery-rail__next-title">
-                  <Placeholder>{exhibits[safeActive + 1].title}</Placeholder> <span aria-hidden>→</span>
+                  <Placeholder>{nextEx.title}</Placeholder> <span aria-hidden>→</span>
                 </span>
               </button>
             ) : (
-              <span className="gallery-rail__next gallery-rail__next--end">End of the collection</span>
+              <span className="gallery-rail__next gallery-rail__next--end">End of the hall</span>
             )}
           </nav>
 
           <MuseumIndex
             open={indexOpen}
-            current={safeActive}
+            current={stops[safeActive]}
             onClose={() => setIndexOpen(false)}
             onPick={openExhibit}
           />
@@ -471,16 +537,20 @@ export default function ProjectMuseum({
         >
           <ProjectRoom
             exhibit={exhibits[selected]}
-            index={selected}
-            total={N}
+            index={Math.max(0, stopOf(selected))}
+            total={M}
             onExit={exit}
-            onPrev={() => goProject(selected - 1)}
-            onNext={() => goProject(selected + 1)}
-            nextTitle={exhibits[selected + 1]?.title}
+            onPrev={() => goProject(stops[stopOf(selected) - 1])}
+            onNext={() => goProject(stops[stopOf(selected) + 1])}
+            nextTitle={exhibits[stops[stopOf(selected) + 1]]?.title}
+            repo={repos[exhibitSlug(exhibits[selected])]}
             returnTo={returnTo}
+            onOpenBook={openBook}
           />
         </div>
       ) : null}
+
+      <VisitorBook open={bookOpen} onClose={() => setBookOpen(false)} />
     </main>
   );
 }
@@ -557,7 +627,7 @@ function MuseumIndex({
                     </span>
                     <span className="museum-index__desc">{ex.description}</span>
                   </span>
-                  {/* the main technology only — the floor plan is for finding
+                  {/* the main technology only: the floor plan is for finding
                       a project, not weighing results (those live in each room) */}
                   <span className="museum-index__side">
                     <span className="museum-index__side-label">{ex.technologies[0]}</span>
@@ -570,6 +640,16 @@ function MuseumIndex({
       </div>
     </dialog>
   );
+}
+
+/** The plaque's live facts, whichever the API has: "1,204 people stepped
+ *  inside · updated 6d ago". Absent entirely until there's something real. */
+function LiveLine({ visits, repo }: { visits?: number; repo?: RepoStats }) {
+  const parts: string[] = [];
+  if (visits) parts.push(visits === 1 ? "1 person stepped inside" : `${visits.toLocaleString("en")} people stepped inside`);
+  if (repo) parts.push(`updated ${timeAgo(repo.pushedAt)}`);
+  if (!parts.length) return null;
+  return <p className="gallery-plaque__visits">{parts.join(" · ")}</p>;
 }
 
 function Placeholder({ children }: { children: string }) {

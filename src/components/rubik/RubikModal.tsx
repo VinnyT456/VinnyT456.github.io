@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import RubikCube, { type CubeFace, type RubikHandle } from "./RubikCube";
+import FlatCube, { type CubeFace, type RubikHandle } from "./FlatCube";
 import {
   formatMs,
   recordSolve,
@@ -15,14 +15,6 @@ import { Icon } from "@/components/icons";
 
 type Phase = "idle" | "solving" | "solved";
 
-const FACES: { key: CubeFace; name: string }[] = [
-  { key: "U", name: "Up" },
-  { key: "D", name: "Down" },
-  { key: "L", name: "Left" },
-  { key: "R", name: "Right" },
-  { key: "F", name: "Front" },
-  { key: "B", name: "Back" },
-];
 
 export default function RubikModal({ onClose }: { onClose: () => void }) {
   const cube = useRef<RubikHandle>(null);
@@ -111,9 +103,7 @@ export default function RubikModal({ onClose }: { onClose: () => void }) {
     cube.current?.reset();
   }, []);
 
-  const turn = useCallback((face: CubeFace, prime: boolean) => {
-    cube.current?.turn(face, prime);
-  }, []);
+  const undo = useCallback(() => cube.current?.undo(), []);
 
   // Keyboard shortcuts: U D L R F B turn that face; hold Shift for prime.
   useEffect(() => {
@@ -151,7 +141,7 @@ export default function RubikModal({ onClose }: { onClose: () => void }) {
 
         <div className="rubik-modal__body">
           <div className="rubik-modal__stage">
-            <RubikCube ref={cube} onMove={handleMove} onSolved={handleSolved} />
+            <FlatCube ref={cube} onMove={handleMove} onSolved={handleSolved} />
 
             <div className="rubik-modal__stats" aria-live="polite">
               <span className="rubik-modal__stat">
@@ -174,38 +164,16 @@ export default function RubikModal({ onClose }: { onClose: () => void }) {
               </div>
             ) : (
               <p className="rubik-modal__hint">
-                Tap a face button to turn it (or drag a sticker) · drag the space to orbit
+                Arrows push a row or column · the curved buttons turn the front face · keys U D L R F B (Shift reverses)
               </p>
             )}
-
-            <div className="rubik-modal__pad" aria-label="Turn controls">
-              {FACES.map((f) => (
-                <div key={f.key} className="rubik-modal__pad-face">
-                  <button
-                    type="button"
-                    className="rubik-modal__face-btn"
-                    onClick={() => turn(f.key, false)}
-                    title={`${f.name} clockwise (${f.key})`}
-                    aria-label={`Turn ${f.name} clockwise`}
-                  >
-                    {f.key}
-                  </button>
-                  <button
-                    type="button"
-                    className="rubik-modal__face-btn rubik-modal__face-btn--prime"
-                    onClick={() => turn(f.key, true)}
-                    title={`${f.name} counter-clockwise (Shift+${f.key})`}
-                    aria-label={`Turn ${f.name} counter-clockwise`}
-                  >
-                    {f.key}′
-                  </button>
-                </div>
-              ))}
-            </div>
 
             <div className="rubik-modal__controls">
               <button type="button" className="rubik-modal__btn rubik-modal__btn--primary" onClick={scramble}>
                 Scramble
+              </button>
+              <button type="button" className="rubik-modal__btn" onClick={undo}>
+                Undo
               </button>
               <button type="button" className="rubik-modal__btn" onClick={reset}>
                 Reset

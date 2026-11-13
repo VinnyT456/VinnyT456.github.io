@@ -3,6 +3,7 @@
 import Atmosphere from "@/components/Atmosphere";
 import CustomCursor from "@/components/CustomCursor";
 import KeyboardModality from "@/components/KeyboardModality";
+import RecruiterRoute from "@/components/RecruiterRoute";
 import dynamic from "next/dynamic";
 
 // The starfield is decoration: load three.js after the page is interactive
@@ -23,6 +24,8 @@ export default function SiteEffects() {
       <CustomCursor />
       {/* Reveals keyboard legends only once someone navigates with keys. */}
       <KeyboardModality />
+      {/* The recruiter route bar: renders nothing unless a tour is active. */}
+      <RecruiterRoute />
     </>
   );
 }

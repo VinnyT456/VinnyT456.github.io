@@ -3,6 +3,7 @@
 import { Canvas } from "@react-three/fiber";
 import RubiksCube from "./RubiksCube";
 import CubeLighting from "./CubeLighting";
+import { useTheme } from "@/lib/theme";
 
 const LOADER_CUBE_SCALE = 0.62;
 
@@ -24,6 +25,7 @@ export default function LoaderCubeScene({
   onSolved: () => void;
   onDone: () => void;
 }) {
+  const theme = useTheme();
   return (
     <Canvas
       // .loader-cube-canvas: on very short screens the canvas stops above the
@@ -34,7 +36,7 @@ export default function LoaderCubeScene({
       dpr={[1, 1.5]}
       gl={{ antialias: true, alpha: true }}
     >
-      <CubeLighting />
+      <CubeLighting day={theme === "light"} />
       <RubiksCube
         reduced={reduced}
         startScrambled

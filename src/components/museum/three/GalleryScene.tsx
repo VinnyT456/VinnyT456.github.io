@@ -1,33 +1,36 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { exhibits } from "@/data/museum";
 import { useReducedMotion } from "@/lib/media";
 import { Hall, Exhibit, SIDE, caseX, caseZ } from "./galleryParts";
+import { blend, stepTimeOfDay, tod } from "./timeOfDay";
 
 /**
- * The gallery interior, in real Three.js: every exhibit in one long hall,
- * cases alternating walls. Scroll (`progress`) walks the camera down it;
+ * The gallery interior, in real Three.js: every exhibit in one long hall, cases
+ * alternating walls. Scroll (`progress`) walks the camera down it;
  * clicking a case enters it.
  *
  * While `preload` is on, the canvas sits hidden under the city walk and draws
  * only on demand: enough to compile its shaders and start its textures. It
  * reports `onReady` once it has drawn, so the walk can open the doors onto it.
  */
-const N = exhibits.length;
 /** cases this far from the one in focus aren't drawn: past ~72 units the fog
  *  has already swallowed them */
 const DRAW_RANGE = 8;
 
 export default function GalleryScene({
+  order,
   progress,
   active,
   preload,
   onReady,
   onEnter,
 }: {
+  /** the exhibits, in walking order (indices into the project list) */
+  order: number[];
   progress: React.MutableRefObject<number>;
   active: number;
   preload: boolean;
@@ -35,7 +38,6 @@ export default function GalleryScene({
   onEnter: (i: number) => void;
 }) {
   const reduced = useReducedMotion();
-
   return (
     <div className="gallery-scene__canvas">
       <Canvas
@@ -44,36 +46,80 @@ export default function GalleryScene({
         dpr={[1, 1.75]}
         frameloop={preload ? "demand" : "always"}
       >
-        <Hall count={N} />
-        <fog attach="fog" args={["#0a0b10", 30, 82]} />
-        <ambientLight intensity={0.7} color="#c8d0e2" />
-        <hemisphereLight args={["#33406a", "#06070c", 0.7]} />
-        <directionalLight position={[-6, 14, 8]} intensity={0.6} color="#dfe6ff" />
-        {exhibits.map((ex, i) => (
-          <group key={ex.id} visible={Math.abs(i - active) <= DRAW_RANGE}>
-            <Exhibit
-              index={i}
-              z={caseZ(i, N)}
-              side={SIDE(i)}
-              accent={ex.theme.accent}
-              image={ex.image}
-              exhibitType={ex.exhibitType}
-              art={ex.theme.art}
-              active={i === active}
-              interior={1}
-              center={false}
-              video={ex.video}
-              title={ex.title}
-              meta={`${ex.year} · ${ex.category}`}
-              playing={i === active && !preload && !reduced}
-              onEnter={() => onEnter(i)}
-            />
-          </group>
-        ))}
-        <Rig progress={progress} reduced={reduced} landAt={active} />
+        <Hall count={order.length} />
+        <HallSky />
+        {order.map((ei, i) => {
+          const ex = exhibits[ei];
+          return (
+            <group key={ex.id} visible={Math.abs(i - active) <= DRAW_RANGE}>
+              <Exhibit
+                index={i}
+                z={caseZ(i, order.length)}
+                side={SIDE(i)}
+                accent={ex.theme.accent}
+                image={ex.image}
+                exhibitType={ex.exhibitType}
+                art={ex.theme.art}
+                active={i === active}
+                interior={1}
+                center={false}
+                video={ex.video}
+                title={ex.title}
+                meta={`${ex.year} · ${ex.category}`}
+                playing={i === active && !preload && !reduced}
+                onEnter={() => onEnter(i)}
+              />
+            </group>
+          );
+        })}
+        <Rig progress={progress} reduced={reduced} landAt={active} n={order.length} />
         <Ready onReady={onReady} />
       </Canvas>
     </div>
+  );
+}
+
+/** The hall's fog and lights: a cool dim by night; by day a bright, soft, violet-shaded interior (nothing warm). */
+function HallSky() {
+  const fog = useRef<THREE.Fog>(null);
+  const ambient = useRef<THREE.AmbientLight>(null);
+  const hemi = useRef<THREE.HemisphereLight>(null);
+  const sun = useRef<THREE.DirectionalLight>(null);
+  const hues = useMemo(
+    () => ({
+      fog: blend("#0a0b10", "#ebe8f6"),
+      ambient: blend("#c8d0e2", "#ffffff"),
+      sky: blend("#33406a", "#ffffff"),
+      ground: blend("#06070c", "#c6bff0"),
+      sun: blend("#dfe6ff", "#ffffff"),
+    }),
+    []
+  );
+  useFrame(({ clock }) => {
+    stepTimeOfDay();
+    const t = tod();
+    if (fog.current) hues.fog(fog.current.color, t);
+    if (ambient.current) {
+      hues.ambient(ambient.current.color, t);
+      ambient.current.intensity = 0.7 + 0.5 * t;
+    }
+    if (hemi.current) {
+      hues.sky(hemi.current.color, t);
+      hues.ground(hemi.current.groundColor, t);
+      hemi.current.intensity = 0.7 + 0.35 * t;
+    }
+    if (sun.current) {
+      hues.sun(sun.current.color, t);
+      sun.current.intensity = 0.6 + 0.9 * t;
+    }
+  });
+  return (
+    <>
+      <fog ref={fog} attach="fog" args={["#0a0b10", 30, 82]} />
+      <ambientLight ref={ambient} intensity={0.7} color="#c8d0e2" />
+      <hemisphereLight ref={hemi} args={["#33406a", "#06070c", 0.7]} />
+      <directionalLight ref={sun} position={[-6, 14, 8]} intensity={0.6} color="#dfe6ff" />
+    </>
   );
 }
 
@@ -100,13 +146,15 @@ function Rig({
   progress,
   reduced,
   landAt,
+  n,
 }: {
   progress: React.MutableRefObject<number>;
   reduced: boolean;
+  /** how many stops the hall has */
+  n: number;
   /** exhibit the camera snaps to on its first frame */
   landAt: number;
 }) {
-  const n = N;
   const { camera, size } = useThree();
   // Portrait framing: 0 on landscape screens, ~0.5 on a phone. A tall narrow
   // view has a tiny horizontal FOV and the plaque covers its lower half, so we

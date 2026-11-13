@@ -23,27 +23,13 @@ const LoaderCubeScene = dynamic(() => import("./three/LoaderCubeScene"), { ssr: 
 const MILESTONES = site.milestones;
 const FINAL = { label: "Solved.", sub: "Your turn." };
 
-/** The intro plays once per browser session; later visits go straight in. */
-const SESSION_KEY = "intro-played";
-
-function playedThisSession() {
-  try {
-    return sessionStorage.getItem(SESSION_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
 export default function Loader() {
   const mounted = useMounted();
   const reduced = useReducedMotion();
-  // Read once at mount. Rendering is gated on `mounted`, so the server and the
-  // first client render both output nothing — no hydration mismatch.
-  const [show, setShow] = useState(
-    () =>
-      typeof document === "undefined" ||
-      (introState() !== "revealed" && !playedThisSession())
-  );
+  // The cube is thrown on every page load (a refresh plays it again); coming back
+  // to Home inside the site doesn't, because the intro state outlives the route.
+  // Rendering is gated on `mounted`, so server and first client render match.
+  const [show, setShow] = useState(() => typeof document === "undefined" || introState() !== "revealed");
   const [fading, setFading] = useState(false);
   const [active, setActive] = useState(-1);
   const [bursting, setBursting] = useState(false);
@@ -55,11 +41,6 @@ export default function Loader() {
     done.current = true;
     setFading(true);
     document.body.style.overflow = "";
-    try {
-      sessionStorage.setItem(SESSION_KEY, "1");
-    } catch {
-      /* private mode — the intro just plays again next time */
-    }
     markIntroRevealed();
     setTimeout(() => setShow(false), reduced ? 0 : 700);
   }, [reduced]);
@@ -73,13 +54,6 @@ export default function Loader() {
 
   useEffect(() => {
     if (introState() === "revealed") return;
-    if (playedThisSession()) {
-      // already seen this session: open the site immediately
-      markHandoffComplete();
-      markIntroRevealed();
-      return;
-    }
-
     markIntroRunning();
     document.body.style.overflow = "hidden";
     failsafe.current = setTimeout(finish, 12000);

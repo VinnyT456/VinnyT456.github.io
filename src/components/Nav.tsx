@@ -5,6 +5,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { navLinks } from "@/lib/nav";
 import { useReducedMotion } from "@/lib/media";
 import { cn } from "@/lib/utils";
+import ThemeToggle from "@/components/ThemeToggle";
 import HoverReveal from "@/components/HoverReveal";
 import TransitionLink from "@/components/transitions/TransitionLink";
 import { CUBE_COLORS } from "@/components/three/cubeColors";
@@ -177,6 +178,7 @@ export default function Nav() {
                 </li>
               ))}
             </ul>
+            <ThemeToggle className="theme-toggle--nav" />
           </div>
         </nav>
       </header>
@@ -231,6 +233,8 @@ export default function Nav() {
             );
           })}
         </ul>
+        {/* links scroll; the theme switch stays pinned at the dock's end */}
+        <ThemeToggle className="theme-toggle--dock" />
       </nav>
     </>
   );

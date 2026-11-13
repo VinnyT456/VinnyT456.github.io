@@ -16,6 +16,8 @@ import {
 import { useReducedMotion } from "@/lib/media";
 import CubeLighting from "./CubeLighting";
 import { sampleCubeParticles } from "./cubeParticles";
+import { lightStickers } from "./cubeColors";
+import { useTheme } from "@/lib/theme";
 
 const CAM_Z = 7.8;
 const CAM_FOV = 42;
@@ -82,18 +84,21 @@ function makeCubeMaterial() {
         float key = max(dot(worldNormal, normalize(vec3(5.0, 8.0, 5.0))), 0.0);
         float fill = max(dot(worldNormal, normalize(vec3(-6.0, -2.0, -4.0))), 0.0);
         float lambert = 0.75 * 0.42 + key * 0.48 + fill * 0.18;
-        vColor = aColor * lambert + vec3(0.09, 0.05, 0.18) * fill * 0.35;
-        float lum = dot(vColor, vec3(0.2126, 0.7152, 0.0722));
-        vColor *= mix(1.0, min(1.0, 0.42 / max(lum, 0.001)), uLight);
+        vec3 night = aColor * lambert + vec3(0.09, 0.05, 0.18) * fill * 0.35;
+        // daylight: inked stickers, lit only a little (matches the hero cube)
+        vec3 day = aColor * (0.82 + key * 0.28 - (1.0 - key) * 0.12);
+        vColor = mix(night, day, uLight);
         vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
         vec3 viewNormal = normalize(normalMatrix * aNrm);
         float facing = dot(viewNormal, normalize(-mvPosition.xyz));
         float front = smoothstep(-0.04, 0.12, facing);
-        float visible = mix(0.4, 1.0, eased);
-        if (uIntroBurst > 0.5) visible = max(visible, 0.88);
+        float visible = mix(mix(0.4, 0.16, uLight), 1.0, eased);
+        // the burst holds the cloud visible; on paper a lighter hold, or the
+        // whole screen fills with ink dust
+        if (uIntroBurst > 0.5) visible = max(visible, mix(0.88, 0.32, uLight));
         vAlpha = visible * mix(1.0, front, smoothstep(0.5, 1.0, eased));
         gl_Position = projectionMatrix * mvPosition;
-        gl_PointSize = uSize * uIntroScale * uPixelRatio * mix(0.55, 1.0, eased) / max(1.0, -mvPosition.z);
+        gl_PointSize = uSize * uIntroScale * uPixelRatio * mix(0.55, 1.0, eased) * mix(1.0, mix(0.8, 1.6, eased), uLight) / max(1.0, -mvPosition.z);
       }
     `,
     fragmentShader: `
@@ -290,7 +295,12 @@ export default function CubeIntroHandoff() {
         : particleBudget(reduced),
     [reduced]
   );
-  const particles = useMemo(() => sampleCubeParticles(budget.cube), [budget.cube]);
+  // the thrown cube must land in the same inks the hero cube wears
+  const theme = useTheme();
+  const particles = useMemo(
+    () => sampleCubeParticles(budget.cube, theme === "light" ? lightStickers() : undefined),
+    [budget.cube, theme]
+  );
 
   useEffect(() => {
     if (reduced || handoffDone) return;
@@ -313,12 +323,12 @@ export default function CubeIntroHandoff() {
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true }}
       >
-        <CubeLighting />
+        <CubeLighting day={theme === "light"} />
         <HandoffScene
           active={bursting}
           particles={particles}
           size={budget.size}
-          light={false}
+          light={theme === "light"}
           onDone={() => {
             markHandoffComplete();
           }}

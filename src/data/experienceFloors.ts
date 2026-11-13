@@ -70,7 +70,7 @@ export const experienceFloors: ExperienceFloor[] = [
     linkLabel: "Look Again",
   },
   {
-    id: "raider-marketplace",
+    id: "raiders-marketplace",
     title: "Software Engineering Intern",
     organization: "Raiders Marketplace",
     location: "Remote",
@@ -104,6 +104,7 @@ export const experienceFloors: ExperienceFloor[] = [
   {
     id: "student-affairs-it",
     title: "Computer Consulting Aide",
+    isCurrent: true, // "Oct. 2025–Present"
     organization: "NU Student Affairs IT",
     location: "Evanston, IL",
     dates: "Oct. 2025–Present",

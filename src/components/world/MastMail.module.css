@@ -1,0 +1,43 @@
+/* the radio mast's message form: small, inside the place card */
+.form { margin-top: 0.7rem; display: grid; gap: 0.6rem; }
+.lead { font-size: 0.8125rem; color: var(--muted); }
+.row { display: grid; gap: 0.25rem; }
+.row label, .labelRow label { font-size: 0.8125rem; font-weight: 500; }
+.hint { font-weight: 400; color: var(--muted); }
+.labelRow { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+.count { font-family: var(--font-geist-mono), ui-monospace, monospace; font-size: 0.6875rem; color: var(--muted); }
+.near { color: #f59e0b; }
+.over { color: #f87171; }
+.row input, .row textarea {
+  width: 100%;
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in oklab, var(--foreground) 16%, transparent);
+  background: color-mix(in oklab, var(--background) 55%, transparent);
+  color: var(--foreground);
+  padding: 0.5rem 0.7rem;
+  font: inherit;
+  font-size: 0.875rem;
+}
+.row textarea { resize: vertical; min-height: 4.6rem; max-height: 9rem; line-height: 1.45; }
+.row input::placeholder, .row textarea::placeholder { color: color-mix(in oklab, var(--foreground) 45%, transparent); }
+.row input:focus-visible, .row textarea:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+.row input[aria-invalid="true"], .row textarea[aria-invalid="true"] { border-color: #f87171; }
+.row input:disabled, .row textarea:disabled { opacity: 0.6; }
+.err { font-size: 0.75rem; color: #fca5a5; }
+.error { font-size: 0.8125rem; line-height: 1.5; color: #fca5a5; }
+.error strong { color: #fecaca; }
+.error a { text-decoration: underline; text-underline-offset: 3px; color: inherit; }
+.send { justify-content: center; width: 100%; }
+.send:disabled { opacity: 0.7; }
+.note { font-size: 0.6875rem; color: var(--muted); }
+.hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.done { margin-top: 0.7rem; display: grid; gap: 0.5rem; justify-items: start; }
+.doneTitle { font-size: 1rem; font-weight: 600; outline: none; }
+.doneSub { font-size: 0.8125rem; color: var(--muted); }
+
+/* the paper plane leaving the mast: a flat overlay across the town */
+.sky { position: fixed; inset: 0; z-index: 60; pointer-events: none; overflow: hidden; }
+.plane { position: absolute; left: -36px; top: -22px; will-change: transform, opacity; filter: drop-shadow(0 4px 10px rgba(167, 139, 250, 0.5)); }
+.spark { position: absolute; left: 0; top: 0; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; }
+@media (prefers-reduced-motion: reduce) { .sky { display: none; } }

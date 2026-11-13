@@ -3,6 +3,8 @@
 /* eslint-disable react-hooks/immutability -- Three.js uniforms, refs and object3D transforms are imperative render state. */
 
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -27,6 +29,15 @@ import {
 import { usePageVisible, useReducedMotion } from "@/lib/media";
 import CubeLighting from "./CubeLighting";
 import { sampleCubeParticles, type CubeParticles } from "./cubeParticles";
+import { CUBE_COLORS, lightStickers } from "./cubeColors";
+import { makeSolidCubies } from "./cubeMaterial";
+import { useTheme } from "@/lib/theme";
+
+// the peek inside (a miniature of the world's three floors on the faces you
+// can see): fetched the first time the cube's pointed at, never before
+const FloorPreview = lazy(() => import("@/components/world/FloorPreview"));
+/** how far the top and bottom layers part for it (cube units; FloorPreview's PEEK_GAP) */
+const PEEK_GAP = 0.62;
 
 const IDLE_SPIN = 0.22;
 const SWAY_RATE = 0.18;
@@ -36,6 +47,10 @@ const SPIN_DAMPING = 2.4;
 const CUBE_SCALE = 0.92;
 const ABOUT_CUBE_SCALE = 0.94;
 const ENTRY_SPIN_MS = 1150;
+// The landed particles hold a beat, then set into the loader's solid cube.
+const SOLIDIFY_DELAY_S = 0.35;
+const SOLIDIFY_S = 0.7;
+const CUBIE = 0.94;
 
 type Spin = {
   tilt: number;
@@ -87,6 +102,7 @@ function makeCubeMaterial() {
       uHover: { value: new THREE.Vector3(999, 999, 999) },
       uHoverStrength: { value: 0 },
       uVivid: { value: 0 },
+      uFade: { value: 1 },
     },
     vertexShader: `
       attribute vec3 aScatter;
@@ -105,6 +121,7 @@ function makeCubeMaterial() {
       uniform vec3 uHover;
       uniform float uHoverStrength;
       uniform float uVivid;
+      uniform float uFade;
 
       varying vec3 vColor;
       varying float vAlpha;
@@ -133,22 +150,27 @@ function makeCubeMaterial() {
         float key = max(dot(worldNormal, normalize(vec3(5.0, 8.0, 5.0))), 0.0);
         float fill = max(dot(worldNormal, normalize(vec3(-6.0, -2.0, -4.0))), 0.0);
         float lambert = 0.75 * mix(0.42, 0.56, uVivid) + key * mix(0.48, 0.58, uVivid) + fill * 0.18;
-        vColor = aColor * lambert + vec3(0.09, 0.05, 0.18) * fill * mix(0.35, 0.58, uVivid);
-
-        float lum = dot(vColor, vec3(0.2126, 0.7152, 0.0722));
-        float ceiling = mix(0.42, 0.72, uVivid);
-        vColor *= mix(1.0, min(1.0, ceiling / max(lum, 0.001)), uLight);
+        vec3 night = aColor * lambert + vec3(0.09, 0.05, 0.18) * fill * mix(0.35, 0.58, uVivid);
+        // Daylight: the inks are already dark, so light only nudges them; the
+        // lit faces lift a touch and shadowed ones deepen, never washing out.
+        vec3 day = aColor * (0.82 + key * 0.28 - (1.0 - key) * 0.12);
+        vColor = mix(night, day, uLight);
 
         vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
         vec3 viewNormal = normalize(normalMatrix * aNrm);
         float facing = dot(viewNormal, normalize(-mvPosition.xyz));
         float front = smoothstep(-0.04, 0.12, facing);
-        float alphaMin = mix(0.4, 0.68, uVivid);
-        vAlpha = mix(alphaMin, 1.0, eased) * mix(1.0, front, smoothstep(0.5, 1.0, eased));
+        // by day, flying dots stay faint (dark ink on paper reads heavy) and only
+        // fill in as they land; the assembled cube is fully inked
+        float alphaMin = mix(mix(0.4, 0.68, uVivid), 0.16, uLight);
+        // ink on paper shows long before light on night does: by day the cube
+        // only gathers weight at the end of its flight
+        float landed = mix(eased, eased * eased * eased, uLight);
+        vAlpha = mix(alphaMin, 1.0, landed) * mix(1.0, front, smoothstep(0.5, 1.0, eased)) * uFade;
 
         gl_Position = projectionMatrix * mvPosition;
         gl_PointSize =
-          uSize * uPixelRatio * mix(0.5, 1.0, eased) / max(1.0, -mvPosition.z);
+          uSize * uPixelRatio * mix(0.5, 1.0, eased) * mix(1.0, mix(0.8, 1.6, landed), uLight) / max(1.0, -mvPosition.z);
       }
     `,
     fragmentShader: `
@@ -197,6 +219,9 @@ function CubeCloud({
   hover,
   scrambleToken,
   onFrontFace,
+  solid,
+  opening,
+  onOpened,
 }: {
   particles: CubeParticles;
   size: number;
@@ -209,21 +234,77 @@ function CubeCloud({
   hover: MutableRefObject<number>; // 0..1 target hover strength
   scrambleToken: number; // increment to re-scramble
   onFrontFace: (index: number) => void;
+  /** Settle the particles into the solid plastic cube once they've landed. */
+  solid: boolean;
+  /** stepping inside: the cube gathers, twists, unfolds and falls into its core; false puts it back together */
+  opening: boolean;
+  onOpened?: () => void;
 }) {
   const group = useRef<THREE.Group>(null);
   const material = useMemo(() => makeCubeMaterial(), []);
   const assemble = useRef(1);
   const lastToken = useRef(scrambleToken);
   const hoverStrength = useRef(0);
+  const [peek, setPeek] = useState(false);
+  // how far the layers have parted for the peek (0 shut, 1 open)
+  const peekAmount = useRef(0);
   const lastFront = useRef(-1);
   const camDir = useRef(new THREE.Vector3());
   const worldNormal = useRef(new THREE.Vector3());
   const normalMatrix = useRef(new THREE.Matrix3());
 
+  // --- Solid cube -----------------------------------------------------------
+  // The intro's cube exactly: the loader's 27 stickerless cubies (same box,
+  // same finish, same lighting), on the particles' lattice, so the thrown cube
+  // lands as the object it started as.
+  const solidCubies = useMemo(() => {
+    const out: { coord: [number, number, number]; pos: THREE.Vector3; quat: THREE.Quaternion }[] = [];
+    for (let x = -1; x <= 1; x++)
+      for (let y = -1; y <= 1; y++)
+        for (let z = -1; z <= 1; z++) {
+          if (x === 0 && y === 0 && z === 0) continue;
+          out.push({ coord: [x, y, z], pos: new THREE.Vector3(x, y, z), quat: new THREE.Quaternion() });
+        }
+    return out;
+  }, []);
+  // by day the plastic between the stickers is dark (like a real cube); by night as ever
+  const solidSet = useMemo(() => makeSolidCubies(solidCubies.map((c) => c.coord), light), [light, solidCubies]);
+  const solidMaterials = solidSet.all;
+  useEffect(
+    () => () => {
+      for (const m of solidMaterials) m.dispose();
+    },
+    [solidMaterials]
+  );
+  const cubieGeometry = useMemo(() => new THREE.BoxGeometry(CUBIE, CUBIE, CUBIE), []);
+  useEffect(() => () => cubieGeometry.dispose(), [cubieGeometry]);
+  const solidGroup = useRef<THREE.Group>(null);
+  const meshes = useRef<THREE.Mesh[]>([]);
+  // settled lattice state per cubie (solidCubies, above), turned alongside the particles
+  const solidness = useRef(0);
+  const openP = useRef(0);
+  // the light at the heart of the opening
+  const flash = useRef<THREE.PointLight>(null);
+  const core = useRef<THREE.Mesh>(null);
+  const openedFired = useRef(false);
+  const solidClock = useRef(0);
+  const turnQuat = useRef(new THREE.Quaternion());
+  const AXES = useMemo(
+    () => [new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 1)],
+    []
+  );
+
   // --- Real Rubik layer-turn engine ---------------------------------------
   const pointsRef = useRef<THREE.Points>(null);
   // Live mutable copies: base = the cube's current settled state (between turns);
   // pos = what we render (base with the in-progress turn applied).
+  // a theme flip re-inks the same particles: write the new colours in place
+  useEffect(() => {
+    const attr = pointsRef.current?.geometry.getAttribute("aColor");
+    if (!attr || attr.array.length !== particles.colors.length) return;
+    (attr.array as Float32Array).set(particles.colors);
+    attr.needsUpdate = true;
+  }, [particles.colors]);
   const base = useMemo(() => particles.positions.slice(), [particles]);
   const pos = useMemo(() => particles.positions.slice(), [particles]);
   const cubie = useMemo(() => particles.cubie.slice(), [particles]);
@@ -341,11 +422,40 @@ function CubeCloud({
         pos[at + 1] = base[at + 1];
         pos[at + 2] = base[at + 2];
       }
+      bakeSolid(axis, slice, dir);
       m.active = m.queue.length ? m.queue.shift()! : null;
       m.t = 0;
     }
 
     (geo.attributes.position as THREE.BufferAttribute).needsUpdate = true;
+  };
+
+  // Pose the solid cubies, the turning layer (if any) at its current angle.
+  const poseSolid = (turn: { axis: 0 | 1 | 2; slice: number; angle: number } | null) => {
+    const q = turnQuat.current;
+    if (turn) q.setFromAxisAngle(AXES[turn.axis], turn.angle);
+    solidCubies.forEach((c, i) => {
+      const mesh = meshes.current[i];
+      if (!mesh) return;
+      const turning = turn !== null && c.coord[turn.axis] === turn.slice;
+      mesh.position.copy(c.pos);
+      mesh.quaternion.copy(c.quat);
+      if (turning) {
+        mesh.position.applyQuaternion(q);
+        mesh.quaternion.premultiply(q);
+      }
+    });
+  };
+
+  // A landed 90° turn: bake it into the cubies' settled state.
+  const bakeSolid = (axis: 0 | 1 | 2, slice: number, dir: 1 | -1) => {
+    const q = turnQuat.current.setFromAxisAngle(AXES[axis], (Math.PI / 2) * dir);
+    for (const c of solidCubies) {
+      if (c.coord[axis] !== slice) continue;
+      c.pos.applyQuaternion(q).round();
+      c.quat.premultiply(q);
+      c.coord = [c.pos.x, c.pos.y, c.pos.z];
+    }
   };
 
   useFrame((state, rawDelta) => {
@@ -398,7 +508,44 @@ function CubeCloud({
       }
     }
 
+    // opening: 0 → 1 over ~0.85s (back again in ~0.6s when the world closes)
+    const openGoal = opening ? 1 : 0;
+    openP.current = reduced
+      ? openGoal
+      : openGoal > openP.current
+        ? Math.min(1, openP.current + delta / 1.0)
+        : Math.max(0, openP.current - delta / 0.6);
+    // the world starts opening while the pieces are still fading: no blank beat
+    if (opening && openP.current >= 0.8 && !openedFired.current) {
+      openedFired.current = true;
+      onOpened?.();
+    }
+    if (!opening) openedFired.current = false;
+    const op = openP.current;
+    const smooth = (a: number, b: number, x: number) => {
+      const u = Math.min(1, Math.max(0, (x - a) / (b - a)));
+      return u * u * (3 - 2 * u);
+    };
+    // the cube stays its size; the opening is choreography, in four beats:
+    // gather (a small squash), twist (top and bottom layers turn opposite
+    // ways), unfold (the pieces part, light in the gaps), implode (every
+    // piece falls into a bright core, and the world opens from that point)
+    const gather = smooth(0, 0.12, op) * (1 - smooth(0.12, 0.24, op));
+    const twistTop = smooth(0.1, 0.42, op) * (Math.PI / 2);
+    const twistBottom = -smooth(0.16, 0.46, op) * (Math.PI / 2);
+    const unfold = smooth(0.36, 0.6, op) * (1 - smooth(0.62, 0.86, op));
+    const implode = smooth(0.62, 0.9, op);
     grp?.rotation.set(s.tilt + sway, displayTurn, 0);
+    // a touch smaller while it's parted, so the taller stack still fits its frame
+    const shrink = 1 - peekAmount.current * 0.22;
+    grp?.scale.set(scale * shrink * (1 + gather * 0.05), scale * shrink * (1 - gather * 0.1), scale * shrink * (1 + gather * 0.05));
+    const glow = smooth(0.38, 0.62, op) * (1 - smooth(0.9, 1, op));
+    if (flash.current) flash.current.intensity = glow * (6 + implode * 14);
+    if (core.current) {
+      core.current.visible = glow > 0.01;
+      core.current.scale.setScalar(0.2 + glow * 0.5 + implode * 0.5);
+      (core.current.material as THREE.MeshBasicMaterial).opacity = glow;
+    }
 
     // Which face points most toward the camera → routing target + ripple center.
     let front = -1;
@@ -426,8 +573,8 @@ function CubeCloud({
 
     // Ripple: ease hover strength toward target, park the ripple center on the
     // front face so the particles you'd click bloom outward.
-    hoverStrength.current +=
-      (hover.current - hoverStrength.current) * Math.min(delta * 6, 1);
+    hoverStrength.current = THREE.MathUtils.damp(hoverStrength.current, hover.current, 10, delta);
+    if (solid && !reduced && !peek && hover.current > 0) setPeek(true);
     const center = front >= 0 ? FACE_NORMALS[front] : FACE_NORMALS[0];
     material.uniforms.uHover.value.copy(center).multiplyScalar(1.5);
     material.uniforms.uHoverStrength.value = reduced ? 0 : hoverStrength.current;
@@ -435,11 +582,75 @@ function CubeCloud({
     material.uniforms.uAssemble.value = assemble.current;
     material.uniforms.uEnergy.value = reduced ? 0 : s.energy;
     material.uniforms.uTime.value = state.clock.elapsedTime;
+    // dark dots on paper need more ink than bright dots on night to read as a face
     material.uniforms.uSize.value = size;
     material.uniforms.uPixelRatio.value = state.gl.getPixelRatio();
     material.uniforms.uReduced.value = reduced ? 1 : 0;
     material.uniforms.uLight.value = light ? 1 : 0;
     material.uniforms.uVivid.value = vivid ? 1 : 0;
+
+    // Solidify: once the frame loop is running the cube is on screen and its
+    // particles have landed; after a beat they set into plastic.
+    if (solid) {
+      solidClock.current += delta;
+      const target = reduced || solidClock.current > SOLIDIFY_DELAY_S ? 1 : 0;
+      solidness.current = reduced
+        ? target
+        : Math.min(target, solidness.current + delta / SOLIDIFY_S);
+    }
+    const k = solidness.current;
+    const eased = k * k * (3 - 2 * k);
+    material.uniforms.uFade.value = 1 - eased;
+    if (pointsRef.current) pointsRef.current.visible = eased < 1;
+    const sg = solidGroup.current;
+    if (sg) {
+      sg.visible = eased > 0;
+      // the cubies grow from just inside the cloud, so the dots seem to fill in
+      sg.scale.setScalar(0.94 + 0.06 * eased);
+      // the last of the pieces fade as the world opens from the core
+      const fade = 1 - smooth(0.82, 0.92, op);
+      for (const mat of solidMaterials) {
+        mat.transparent = eased * fade < 1;
+        mat.opacity = eased * fade;
+      }
+      const mv = move.current;
+      const turning = mv.active
+        ? { axis: mv.active.axis, slice: mv.active.slice, angle: (Math.PI / 2) * mv.active.dir * easeInOut(mv.t) }
+        : null;
+      poseSolid(turning);
+      // the peek: pointed at, the top layer lifts and the bottom one drops,
+      // and the world's floors stand in the gaps (only on the whole, settled
+      // cube: not mid-turn, nor while it opens)
+      const settled = !mv.active && !mv.queue.length && op === 0 && eased > 0.99;
+      const want = peek && settled ? hoverStrength.current : 0;
+      peekAmount.current = THREE.MathUtils.damp(peekAmount.current, want, want > peekAmount.current ? 10 : 12, delta);
+      const gap = PEEK_GAP * peekAmount.current;
+      if (gap > 0.001)
+        meshes.current.forEach((m, i) => {
+          if (!m) return;
+          const y = solidCubies[i].coord[1];
+          if (y !== 0) m.position.y += y * gap;
+        });
+      if (op > 0) {
+        meshes.current.forEach((m, i) => {
+          if (!m) return;
+          const c = solidCubies[i];
+          // the twist: the top layer one way, the bottom the other
+          const layer = c.coord[1] === 1 ? twistTop : c.coord[1] === -1 ? twistBottom : 0;
+          if (layer) {
+            turnQuat.current.setFromAxisAngle(AXES[1], layer);
+            m.position.applyQuaternion(turnQuat.current);
+            m.quaternion.premultiply(turnQuat.current);
+          }
+          // unfold: part along the lattice, a little, with a slight tumble;
+          // implode: everything falls in to the core and shrinks away
+          m.position.multiplyScalar((1 + unfold * 0.45) * (1 - implode));
+          m.rotateX(unfold * ((i % 3) - 1) * 0.35);
+          m.rotateZ(unfold * ((i % 5) - 2) * 0.2);
+          m.scale.setScalar(1 - implode * 0.85);
+        });
+      } else meshes.current.forEach((m) => m?.scale.setScalar(1));
+    }
   });
 
   return (
@@ -458,6 +669,39 @@ function CubeCloud({
         </bufferGeometry>
         <primitive object={material} attach="material" />
       </points>
+      {solid ? (
+        <>
+          <pointLight ref={flash} color="#c4b5fd" intensity={0} distance={9} />
+          {/* the bright core the pieces fall into */}
+          <mesh ref={core} visible={false}>
+            <sphereGeometry args={[0.5, 24, 16]} />
+            <meshBasicMaterial color="#c4b5fd" transparent opacity={0} depthWrite={false} blending={THREE.AdditiveBlending} />
+          </mesh>
+        </>
+      ) : null}
+      {peek ? (
+        <Suspense fallback={null}>
+          <FloorPreview
+            amount={peekAmount}
+            light={light}
+          />
+        </Suspense>
+      ) : null}
+      {solid ? (
+        <group ref={solidGroup} visible={false}>
+          {solidCubies.map((c, i) => (
+            <mesh
+              key={i}
+              ref={(el) => {
+                if (el) meshes.current[i] = el;
+              }}
+              geometry={cubieGeometry}
+              material={solidSet.per[i]}
+              position={c.pos}
+            />
+          ))}
+        </group>
+      ) : null}
     </group>
   );
 }
@@ -465,7 +709,8 @@ function CubeCloud({
 // Face index → nav route. Order matches FACE_NORMALS (±X, ±Y, ±Z).
 const FACE_ROUTES = navLinks.map((l) => ({ href: l.href, label: l.label }));
 const TAP_SLOP = 8; // px of movement below which a pointer up counts as a tap
-const DOUBLE_TAP_MS = 320; // two taps within this window = scramble
+const DOUBLE_TAP_MS = 320; // two taps within this window = step inside the cube
+const LONG_PRESS_MS = 550; // a held, still press = scramble
 const FACE_SETTLE_MS = 300;
 
 export type ParticleCubeVariant = "nav" | "about";
@@ -477,6 +722,9 @@ export default function ParticleCube({
   onAboutFacePreview,
   onAboutFaceSettled,
   onAboutTap,
+  onEnter,
+  opening = false,
+  onOpened,
   forceVisible = false,
 }: {
   variant?: ParticleCubeVariant;
@@ -493,6 +741,12 @@ export default function ParticleCube({
   onAboutFaceSettled?: (faceIndex: number) => void;
   /** About mode — single tap on settled face (expand content). */
   onAboutTap?: (faceIndex: number) => void;
+  /** Nav mode — double-click / double-tap: step inside the cube. */
+  onEnter?: () => void;
+  /** Nav mode — play the opening (the parent sets it on entering, clears it on leaving). */
+  opening?: boolean;
+  /** Nav mode — the opening has finished: open the world now. */
+  onOpened?: () => void;
   /** Skip intro handoff gate (About page). */
   forceVisible?: boolean;
 }) {
@@ -524,6 +778,8 @@ export default function ParticleCube({
   // single-tap action past its window.
   const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTapAt = useRef(0);
+  // scramble lives on a long press now (S on a keyboard): double-tap enters
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isAbout = variant === "about";
   const budget = useMemo(
     () =>
@@ -532,7 +788,12 @@ export default function ParticleCube({
         : particleBudget(reduced, isAbout),
     [isAbout, reduced]
   );
-  const particles = useMemo(() => sampleCubeParticles(budget.cube), [budget.cube]);
+  // on paper the cube is printed in ink: same faces, dark stickers, capped glow
+  const theme = useTheme();
+  const particles = useMemo(
+    () => sampleCubeParticles(budget.cube, theme === "light" ? lightStickers() : CUBE_COLORS),
+    [budget.cube, theme]
+  );
   const cubeScale = isAbout ? ABOUT_CUBE_SCALE : CUBE_SCALE;
 
   useEffect(() => {
@@ -627,6 +888,16 @@ export default function ParticleCube({
     pressStart.current = { x: event.clientX, y: event.clientY, moved: 0 };
     hover.current = 1;
     react("drag");
+    if (variant === "nav") {
+      if (pressTimer.current) clearTimeout(pressTimer.current);
+      pressTimer.current = setTimeout(() => {
+        pressTimer.current = null;
+        if (!pressStart.current || pressStart.current.moved >= TAP_SLOP) return;
+        pressStart.current = null; // the release isn't a tap
+        spin.current.dragging = false;
+        handleScramble();
+      }, LONG_PRESS_MS);
+    }
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
@@ -644,6 +915,10 @@ export default function ParticleCube({
     s.tiltVelocity = dy * DRAG_SPEED * 34;
     if (pressStart.current) {
       pressStart.current.moved += Math.abs(dx) + Math.abs(dy);
+      if (pressStart.current.moved >= TAP_SLOP && pressTimer.current) {
+        clearTimeout(pressTimer.current);
+        pressTimer.current = null;
+      }
     }
     // A hard flick of the cube earns a reaction.
     if (Math.abs(dx) + Math.abs(dy) > 55) react("fastspin");
@@ -651,6 +926,10 @@ export default function ParticleCube({
 
   function onPointerUp() {
     spin.current.dragging = false;
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
     const p = pressStart.current;
     pressStart.current = null;
     if (!p || p.moved >= TAP_SLOP) return; // a drag, not a tap
@@ -664,14 +943,15 @@ export default function ParticleCube({
       return;
     }
 
-    // Second tap inside the double-tap window → scramble, cancel pending action.
+    // Second tap inside the double-tap window → step inside, cancel the open.
     if (sinceLast < DOUBLE_TAP_MS) {
       lastTapAt.current = 0;
       if (tapTimer.current) {
         clearTimeout(tapTimer.current);
         tapTimer.current = null;
       }
-      handleScramble();
+      if (onEnter) onEnter();
+      else handleScramble();
       return;
     }
 
@@ -693,6 +973,10 @@ export default function ParticleCube({
     spin.current.dragging = false;
     pressStart.current = null;
     hover.current = 0;
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -703,6 +987,9 @@ export default function ParticleCube({
     else if (event.key === "ArrowRight") s.turnVelocity += step;
     else if (event.key === "ArrowUp") s.tiltVelocity -= step;
     else if (event.key === "ArrowDown") s.tiltVelocity += step;
+    else if ((event.key === "s" || event.key === "S") && variant === "nav" && !event.metaKey && !event.ctrlKey && !event.altKey) handleScramble();
+    // the keyboard's double-click: I steps inside the cube
+    else if ((event.key === "i" || event.key === "I") && onEnter && !event.metaKey && !event.ctrlKey && !event.altKey) onEnter();
     else if (event.key === "Enter" || event.key === " ") {
       if (variant === "about" && frontFace >= 0) {
         onAboutTap?.(frontFace);
@@ -716,6 +1003,7 @@ export default function ParticleCube({
   useEffect(
     () => () => {
       if (tapTimer.current) clearTimeout(tapTimer.current);
+      if (pressTimer.current) clearTimeout(pressTimer.current);
     },
     []
   );
@@ -753,7 +1041,7 @@ export default function ParticleCube({
         variant === "about"
           ? "Explore Vincent. Drag or arrow keys to rotate the cube. Each face is a different side of Vincent. Press Enter to expand the active face."
           : frontRoute
-            ? `Rubik's cube. Front face goes to ${frontRoute.label}. Drag or arrow keys to spin; press Enter to open; double-click to scramble.`
+            ? `Rubik's cube. Front face goes to ${frontRoute.label}. Drag or arrow keys to spin; press Enter to open; S to scramble; I to step inside.`
             : "A Rubik's cube built from particles. Drag it, or use the arrow keys, to spin it."
       }
       className={`group absolute inset-0 cursor-grab touch-pan-y rounded-4xl outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing transition-opacity duration-500 ${
@@ -766,6 +1054,8 @@ export default function ParticleCube({
         hover.current = 1;
       }}
       onPointerLeave={endDrag}
+      onFocus={() => { hover.current = 1; }}
+      onBlur={endDrag}
       onPointerCancel={endDrag}
       onLostPointerCapture={endDrag}
       onKeyDown={onKeyDown}
@@ -781,33 +1071,25 @@ export default function ParticleCube({
         frameloop={canvasActive ? "always" : "never"}
         gl={{ antialias: true, alpha: true }}
       >
-        <CubeLighting bright={isAbout} />
+        <CubeLighting bright={isAbout} day={!isAbout && theme === "light"} />
         <CubeCloud
           particles={particles}
           size={budget.size}
           spin={spin}
           entrySpin={entrySpin}
           reduced={reduced}
-          light={false}
+          light={theme === "light"}
           vivid={isAbout}
           scale={cubeScale}
           hover={hover}
           scrambleToken={scrambleToken}
           onFrontFace={handleFrontFace}
+          solid={!isAbout}
+          opening={opening}
+          onOpened={onOpened}
         />
       </Canvas>
 
-      {/* Floating route hint — appears on hover/focus. Parked low in the stage,
-          around the CTA-button height, below the cube's lowest particles so it
-          never overlaps the geometry. */}
-      {variant === "nav" && frontRoute ? (
-        <span
-          aria-hidden
-          className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-foreground/10 bg-background/70 px-3 py-1 font-mono text-xs text-muted opacity-0 backdrop-blur-sm transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100"
-        >
-          ↵ {frontRoute.label}
-        </span>
-      ) : null}
     </div>
     </>
   );

@@ -1,0 +1,297 @@
+.panel {
+  position: absolute;
+  z-index: 35;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  width: min(21rem, calc(100vw - 2rem));
+  max-height: min(78vh, 42rem);
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent);
+  border-radius: var(--radius-xl, 16px);
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--background) 94%, transparent);
+  box-shadow: 0 12px 32px color-mix(in oklab, var(--shade) 24%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.header,
+.listHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.close,
+.clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border: 1px solid color-mix(in oklab, var(--foreground) 22%, transparent);
+  border-radius: 0.55rem;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.close {
+  flex: none;
+}
+
+.status {
+  margin: 0.7rem 0;
+  color: var(--muted);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.map {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+}
+
+.ground {
+  fill: color-mix(in oklab, var(--background) 86%, var(--accent));
+  stroke: color-mix(in oklab, var(--accent) 28%, transparent);
+}
+
+.road {
+  fill: color-mix(in oklab, var(--foreground) 8%, var(--background));
+  stroke: color-mix(in oklab, var(--foreground) 16%, transparent);
+  stroke-width: 0.6;
+}
+
+.circuit {
+  fill: none;
+  stroke: color-mix(in oklab, var(--foreground) 24%, var(--background));
+  stroke-linejoin: round;
+}
+
+.circuitLine {
+  fill: none;
+  stroke: color-mix(in oklab, var(--accent) 65%, var(--foreground));
+  stroke-width: 0.8;
+  stroke-dasharray: 3 3;
+}
+
+.arena {
+  fill: color-mix(in oklab, var(--accent) 10%, var(--background));
+  stroke: var(--accent);
+  stroke-width: 1;
+}
+
+.cabinet {
+  fill: var(--accent);
+  stroke: var(--background);
+  stroke-width: 1;
+}
+
+.walkway {
+  fill: color-mix(in oklab, var(--foreground) 24%, var(--background));
+  stroke: color-mix(in oklab, var(--foreground) 38%, var(--background));
+  stroke-width: 0.5;
+}
+
+.crosswalk {
+  fill: color-mix(in oklab, var(--accent) 48%, var(--foreground));
+  stroke: color-mix(in oklab, var(--background) 58%, transparent);
+  stroke-width: 0.6;
+}
+
+.rail {
+  fill: none;
+  stroke: color-mix(in oklab, var(--foreground) 62%, var(--accent));
+  stroke-width: 1.1;
+  stroke-dasharray: 2 1.3;
+}
+
+.station {
+  fill: var(--background);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+.stationLabel {
+  fill: var(--foreground);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 6px;
+  font-weight: 600;
+}
+
+.landmark {
+  fill: var(--accent);
+  stroke: var(--background);
+  stroke-width: 1.4;
+}
+
+.hubHalo {
+  fill: none;
+  stroke: color-mix(in oklab, var(--foreground) 72%, transparent);
+  stroke-width: 0.9;
+}
+
+.hubMarker {
+  stroke: var(--background);
+  stroke-width: 1.2;
+}
+
+.selected {
+  fill: var(--foreground);
+  stroke: var(--accent);
+  stroke-width: 1.6;
+}
+
+.you {
+  fill: var(--status-live);
+  stroke: var(--background);
+  stroke-width: 1.5;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  padding: 0.5rem 0.2rem 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.legend i {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+}
+
+.legendYou {
+  background: var(--status-live);
+}
+
+.legendLandmark {
+  background: var(--accent);
+}
+
+.legendWalkway {
+  background: color-mix(in oklab, var(--foreground) 24%, var(--background));
+  border: 1px solid color-mix(in oklab, var(--foreground) 42%, var(--background));
+}
+
+.legendRail {
+  background: var(--background);
+  border: 2px dashed var(--accent);
+}
+
+.legendDestination {
+  background: var(--foreground);
+  outline: 1px solid var(--accent);
+}
+
+.listHeader {
+  margin-top: 0.9rem;
+}
+
+.listHeader h3 {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.clear {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.7rem;
+}
+
+.list {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0.45rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.place {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
+}
+
+.dot {
+  flex: 0 0 0.55rem;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--place-color);
+}
+
+.kind {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.67rem;
+}
+
+.place:hover,
+.place:focus-visible,
+.active {
+  border-color: color-mix(in oklab, var(--accent) 42%, transparent);
+  background: color-mix(in oklab, var(--accent) 9%, transparent);
+}
+
+.place:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.close:focus-visible,
+.clear:focus-visible,
+.place:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .place,
+  .close {
+    transition: background-color 160ms ease, border-color 160ms ease;
+  }
+}
+
+@media (max-width: 639px) {
+  .map {
+    max-width: 14rem;
+    margin-inline: auto;
+  }
+
+  .panel {
+    right: max(0.75rem, env(safe-area-inset-right));
+    bottom: calc(9.25rem + env(safe-area-inset-bottom));
+    left: max(0.75rem, env(safe-area-inset-left));
+    width: auto;
+    max-height: min(62vh, 32rem);
+  }
+}

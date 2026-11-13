@@ -111,7 +111,7 @@ function scatterPoint(rand: () => number, settled: THREE.Vector3, out: THREE.Vec
   );
 }
 
-export function sampleCubeParticles(requested: number): CubeParticles {
+export function sampleCubeParticles(requested: number, stickers: readonly string[] = CUBE_COLORS): CubeParticles {
   const rand = mulberry32(9041);
   const { patches, total } = buildPatches(requested);
 
@@ -123,7 +123,7 @@ export function sampleCubeParticles(requested: number): CubeParticles {
   const seeds = new Float32Array(total);
   const cubie = new Int8Array(total * 3);
 
-  const palette = CUBE_COLORS.map((hex) => new THREE.Color(hex));
+  const palette = stickers.map((hex) => new THREE.Color(hex));
   const point = new THREE.Vector3();
   const origin = new THREE.Vector3();
   const tint = new THREE.Color();

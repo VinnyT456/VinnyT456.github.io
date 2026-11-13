@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useLayoutEffect } from "react";
-import { CUBE_COLORS } from "@/components/three/cubeColors";
+import { stickerColors } from "@/components/three/cubeColors";
 
 type Particle = {
   x: number;
@@ -9,7 +9,8 @@ type Particle = {
   vx: number;
   vy: number;
   size: number;
-  color: string;
+  /** which of the cube's six stickers it wears; its colour is looked up as it's drawn, so a theme flip mid-run re-inks it */
+  face: number;
   delay: number;
   spin: number;
 };
@@ -36,11 +37,58 @@ function easeInOutCubic(t: number) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
+type Rgb = [number, number, number];
+let probe: CanvasRenderingContext2D | null = null;
+/** Any CSS colour (hex, oklch, a mix) as r, g, b: let the browser paint one pixel and read it back. */
+function rgbOf(css: string, fallback: Rgb): Rgb {
+  if (typeof document === "undefined") return fallback;
+  probe ??= document.createElement("canvas").getContext("2d", { willReadFrequently: true });
+  if (!probe) return fallback;
+  probe.canvas.width = probe.canvas.height = 1;
+  probe.clearRect(0, 0, 1, 1);
+  probe.fillStyle = "#000";
+  probe.fillStyle = css;
+  probe.fillRect(0, 0, 1, 1);
+  const d = probe.getImageData(0, 0, 1, 1).data;
+  return [d[0], d[1], d[2]];
+}
+
+/** The portal's colours, from the page's tokens (--void-core, --void, --void-rim, --accent), re-read when the theme changes. */
+let portalCache: { theme: string; core: Rgb; edge: Rgb; rim: Rgb; ring: Rgb; ringAlpha: number; ringWidth: number } | null = null;
+function portalPalette() {
+  const theme = document.documentElement.dataset.theme ?? "dark";
+  if (portalCache?.theme === theme) return portalCache;
+  const cs = getComputedStyle(document.documentElement);
+  const read = (name: string, fallback: Rgb) => rgbOf(cs.getPropertyValue(name).trim() || "", fallback);
+  portalCache = {
+    theme,
+    core: read("--void-core", [4, 4, 7]),
+    edge: read("--void", [8, 8, 11]),
+    rim: read("--void-rim", [237, 237, 237]),
+    ring: read("--accent", [167, 139, 250]),
+    ringAlpha: parseFloat(cs.getPropertyValue("--ring-alpha")) || 1,
+    ringWidth: parseFloat(cs.getPropertyValue("--ring-width")) || 1,
+  };
+  return portalCache;
+}
+let stickerCache: { theme: string; colors: string[]; size: number; alpha: number } | null = null;
+/** The six sticker colours for the page's theme right now, and how heavy to draw them (re-read when it flips). */
+function stickers() {
+  const theme = document.documentElement.dataset.theme ?? "dark";
+  if (stickerCache?.theme !== theme) {
+    const cs = getComputedStyle(document.documentElement);
+    const num = (name: string) => parseFloat(cs.getPropertyValue(name)) || 1;
+    stickerCache = { theme, colors: stickerColors(), size: num("--burst-size"), alpha: num("--burst-alpha") };
+  }
+  return stickerCache;
+}
+const rgba = (c: Rgb, a: number) => `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${a})`;
+
 function spawnParticles(count: number, cx: number, cy: number, spread: number) {
   return Array.from({ length: count }, () => {
     const angle = Math.random() * Math.PI * 2;
     const radius = Math.random() * spread;
-    const color = CUBE_COLORS[Math.floor(Math.random() * CUBE_COLORS.length)];
+    const face = Math.floor(Math.random() * 6);
     const speed = 4.2 + Math.random() * 5.8;
     return {
       x: cx + Math.cos(angle) * radius * 0.5,
@@ -48,7 +96,7 @@ function spawnParticles(count: number, cx: number, cy: number, spread: number) {
       vx: Math.cos(angle) * speed + (Math.random() - 0.5) * 1.2,
       vy: Math.sin(angle) * speed + (Math.random() - 0.5) * 1.2,
       size: 2 + Math.random() * 3.4,
-      color,
+      face,
       delay: Math.random(),
       spin: Math.random() * Math.PI * 2,
     } satisfies Particle;
@@ -66,14 +114,12 @@ function drawPortal(
 ) {
   if (radius < 2 || intensity <= 0) return;
 
+  const pal = portalPalette();
   const voidGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius * 1.12);
-  voidGrad.addColorStop(
-    0,
-    `rgba(4, 4, 7, ${traveling ? 0.88 + intensity * 0.1 : 0.55 + intensity * 0.35})`
-  );
-  voidGrad.addColorStop(0.55, `rgba(8, 8, 11, ${0.28 + intensity * 0.22})`);
-  voidGrad.addColorStop(0.88, `rgba(8, 8, 11, ${0.06 * intensity})`);
-  voidGrad.addColorStop(1, "rgba(8, 8, 11, 0)");
+  voidGrad.addColorStop(0, rgba(pal.core, traveling ? 0.88 + intensity * 0.1 : 0.55 + intensity * 0.35));
+  voidGrad.addColorStop(0.55, rgba(pal.edge, 0.28 + intensity * 0.22));
+  voidGrad.addColorStop(0.88, rgba(pal.edge, 0.06 * intensity));
+  voidGrad.addColorStop(1, rgba(pal.edge, 0));
   ctx.fillStyle = voidGrad;
   ctx.beginPath();
   ctx.arc(cx, cy, radius * 1.12, 0, Math.PI * 2);
@@ -88,8 +134,8 @@ function drawPortal(
     ctx.translate(cx, cy);
     ctx.rotate(time * ring.speed);
     ctx.scale(1, ring.tilt);
-    ctx.strokeStyle = `rgba(167, 139, 250, ${ring.alpha * intensity})`;
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = rgba(pal.ring, Math.min(0.95, ring.alpha * intensity * pal.ringAlpha));
+    ctx.lineWidth = 1.5 * pal.ringWidth;
     ctx.beginPath();
     ctx.arc(0, 0, radius * ring.scale, 0, Math.PI * 2);
     ctx.stroke();
@@ -98,14 +144,14 @@ function drawPortal(
 
   ctx.beginPath();
   ctx.arc(cx, cy, radius * 1.04, 0, Math.PI * 2);
-  ctx.strokeStyle = `rgba(167, 139, 250, ${0.12 + intensity * 0.18})`;
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = rgba(pal.ring, Math.min(0.95, (0.12 + intensity * 0.18) * pal.ringAlpha));
+  ctx.lineWidth = 1.5 * pal.ringWidth;
   ctx.stroke();
 
   ctx.beginPath();
   ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-  ctx.strokeStyle = `rgba(237, 237, 237, ${0.16 + intensity * 0.22})`;
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = rgba(pal.rim, Math.min(0.95, (0.16 + intensity * 0.22) * pal.ringAlpha));
+  ctx.lineWidth = 1.5 * pal.ringWidth;
   ctx.stroke();
 }
 
@@ -324,9 +370,9 @@ export default function FlatCubeBurstCanvas({
           if (alpha < 0.03) continue;
 
           ctx.beginPath();
-          ctx.fillStyle = p.color;
-          ctx.globalAlpha = alpha * 0.9;
-          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fillStyle = stickers().colors[p.face];
+          ctx.globalAlpha = Math.min(1, alpha * 0.9 * stickers().alpha);
+          ctx.arc(p.x, p.y, p.size * stickers().size, 0, Math.PI * 2);
           ctx.fill();
           continue;
         }
@@ -337,9 +383,9 @@ export default function FlatCubeBurstCanvas({
             : 0;
 
         ctx.beginPath();
-        ctx.fillStyle = p.color;
-        ctx.globalAlpha = alpha * 0.88;
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = stickers().colors[p.face];
+        ctx.globalAlpha = Math.min(1, alpha * 0.88 * stickers().alpha);
+        ctx.arc(p.x, p.y, p.size * stickers().size, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.globalAlpha = 1;

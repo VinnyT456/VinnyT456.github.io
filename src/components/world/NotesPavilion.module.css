@@ -1,0 +1,135 @@
+.panel {
+  position: absolute;
+  z-index: 35;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  width: min(25rem, calc(100vw - 2rem));
+  max-height: min(78vh, 42rem);
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent);
+  border-radius: var(--radius-xl, 16px);
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--background) 94%, transparent);
+  box-shadow: 0 12px 32px color-mix(in oklab, var(--shade) 24%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.close {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border: 1px solid color-mix(in oklab, var(--foreground) 22%, transparent);
+  border-radius: 0.55rem;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.message {
+  padding: 0.8rem 0.2rem;
+  color: var(--muted);
+}
+
+.message button {
+  min-height: 2.75rem;
+  padding: 0.3rem 0.6rem;
+  border: 0;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  background: none;
+  cursor: pointer;
+}
+
+.list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.note {
+  display: grid;
+  gap: 0.3rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.8rem 0.25rem;
+  border: 0;
+  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 12%, transparent);
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
+}
+
+.note:hover,
+.note:focus-visible {
+  background: color-mix(in oklab, var(--accent) 7%, transparent);
+}
+
+.title {
+  font-weight: 650;
+}
+
+.draft {
+  display: inline-block;
+  margin-left: 0.5rem;
+  color: var(--status-warn);
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.summary,
+.meta {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.meta {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.close:focus-visible,
+.message button:focus-visible,
+.note:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .note,
+  .close {
+    transition: background-color 160ms ease, border-color 160ms ease;
+  }
+}
+
+@media (max-width: 639px) {
+  .panel {
+    right: max(0.75rem, env(safe-area-inset-right));
+    bottom: calc(9.25rem + env(safe-area-inset-bottom));
+    left: max(0.75rem, env(safe-area-inset-left));
+    width: auto;
+    max-height: min(62vh, 32rem);
+  }
+}

@@ -31,6 +31,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # full history: the About shell's `git log` is built from the real commits
+          fetch-depth: 0
       - name: Detect package manager
         id: detect-package-manager
         run: |
@@ -73,8 +76,15 @@ jobs:
             ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}-
       - name: Install dependencies
         run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
+      - name: Render link-preview cards
+        # public/og/*.png — real .png files so Pages serves them as images
+        run: npm run og
       - name: Build with Next.js
         run: ${{ steps.detect-package-manager.outputs.runner }} next build
+        env:
+          # where the API (server/, on Render) lives; set under
+          # Settings → Secrets and variables → Actions → Variables
+          NEXT_PUBLIC_API_URL: ${{ vars.API_URL }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

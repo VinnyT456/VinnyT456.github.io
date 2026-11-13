@@ -1,3 +1,5 @@
+import { experienceFloors } from "./experienceFloors";
+import { latestMonth, monthYear } from "@/lib/dates";
 // Edit this file to personalize your site. All content lives here.
 
 export const site = {
@@ -7,8 +9,9 @@ export const site = {
   role: "CS student at Northwestern",
   seeking: "SWE internships",
   headline: "CS student at Northwestern, seeking SWE internships",
-  tagline:
-    "I ship real product, and I build the playful stuff for the joy of it. Interfaces, APIs, and the occasional 3D toy that refuses to sit still.",
+  tagline: "I ship real product, and I build the playful stuff for the joy of it.",
+  // the live address: link previews, sitemap and RSS build absolute URLs from it
+  url: "https://vinnyt456.github.io",
   email: "vincent03280608@gmail.com",
   github: "https://github.com/VinnyT456",
   linkedin: "https://www.linkedin.com/in/vt07/",
@@ -19,8 +22,8 @@ export const site = {
   // Real profile URLs only — linking the GitHub/LinkedIn homepage is worse than none.
   socials: [] as { label: string; href: string }[],
   about: [
-    "CS student at Northwestern who builds across the stack: interfaces, APIs, data. The cube on this page is the other half: it scrambles, solves, then hands you the controls. I can't leave a clever interaction unbuilt.",
-    "If the work is real, the site should prove it before the résumé does. Drag the cube. Then look at Projects, or email me.",
+    "CS student at Northwestern who builds across the stack: interfaces, APIs, data. The cube on the home page is the other half: it scrambles, solves, then hands you the controls. I can't leave a clever interaction unbuilt.",
+    "If the work is real, the site should prove it before the résumé does. Spin the cube on Home. Then look at Projects, or email me.",
   ],
   aboutHero: {
     command: "whoami",
@@ -30,8 +33,8 @@ export const site = {
     {
       title: "Personal Portfolio",
       description:
-        "A dark, interactive portfolio. The hero cube solves itself, then you orbit it. The page is the demo, not a screenshot of one.",
-      tags: ["Next.js", "Three.js", "WebGL"],
+        "An interactive portfolio, night by default. The hero cube solves itself, then you orbit it. The page is the demo, not a screenshot of one.",
+      tags: ["Next.js", "React", "TypeScript", "Three.js", "WebGL"],
       href: "",
       year: "2026",
     },
@@ -45,6 +48,11 @@ export const site = {
         "Shipping across the stack. This site is current work: React Three Fiber, theming, and a solve you can take over.",
     },
   ],
+  // What I'm on right now: the hero's "now:" row. Keep it to two things.
+  now: {
+    building: { label: "Look Again", href: "https://studio.knightlab.com/projects/look-again/", at: "Knight Lab" },
+    team: { label: "Northwestern Forge", href: "https://nnci.northwestern.edu/major-initiatives/forge.html" },
+  },
   // Skills live in data/skills.ts — the Skills page, the terminal, and Home
   // all read from there.
   resume: {
@@ -53,8 +61,9 @@ export const site = {
     // Public résumé. Drop the graduation-date-free PDF in /public and set e.g.
     // pdf: "/resume.pdf" — View/Download activate automatically once set.
     pdf: "/resume/Vincent_Tang_Resume.pdf",
-    // "Updated" stamp shown on the page — a maintenance date, NOT a grad date.
-    updated: "August 2026",
+    // The "Updated" stamp follows the newest role in the data, so it can't fall behind the page it stamps.
+    // (A maintenance date, NOT a grad date.)
+    updated: monthYear(latestMonth(experienceFloors.map((r) => r.dates))),
     // Public education: institution + degree only. No graduation date/year by
     // design — the public résumé must not reveal an expected graduation date.
     education: [

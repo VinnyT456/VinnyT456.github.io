@@ -1,0 +1,217 @@
+/* The recruiter route bar. Only the site tokens are used (--foreground, --muted,
+   --accent, --surface, --background, --ring, --shade), so Night Workshop and
+   Lavender newsprint both read with no theme branches. It sits above the phone
+   dock (z-sticky 50) and under the loader, modals and the page transition. */
+
+.bar {
+  position: fixed;
+  z-index: 56;
+  left: 50%;
+  --lift: 0px; /* raised on mid widths, where the page's own bottom controls would sit under it */
+  bottom: calc(max(0.75rem, env(safe-area-inset-bottom)) + var(--lift));
+  transform: translateX(-50%);
+  width: min(46rem, calc(100vw - 2rem));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem 1.25rem;
+  padding: 0.7rem 0.85rem 0.7rem 1.1rem;
+  border-radius: var(--radius-lg, 14px);
+  border: 1px solid color-mix(in oklab, var(--foreground) 20%, transparent);
+  background: var(--surface);
+  color: var(--foreground);
+  /* flat by default: a soft ink shadow lifts it off the page, no glow */
+  box-shadow: 0 10px 28px -12px color-mix(in oklab, var(--shade) 55%, transparent);
+}
+
+.bar:not([data-reduced]) {
+  animation: rise 240ms var(--ease-out, ease-out) both;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+.text {
+  min-width: 0;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: var(--text-xs, 0.8125rem);
+}
+.count {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.title {
+  color: var(--foreground);
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dots {
+  display: inline-flex;
+  gap: 0.3rem;
+  margin-left: auto;
+}
+.dots i {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in oklab, var(--foreground) 55%, transparent);
+  box-sizing: border-box;
+}
+.dots i[data-state="done"] {
+  background: color-mix(in oklab, var(--foreground) 55%, transparent);
+}
+/* the current stop is longer, not just a different colour */
+.dots i[data-state="now"] {
+  width: 1.1rem;
+  border-radius: 999px;
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.bar:not([data-reduced]) .dots i {
+  transition: width 200ms var(--ease-out, ease-out), background-color 200ms;
+}
+
+.reason {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: var(--text-sm, 0.875rem);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.link {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.btn {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  padding: 0 0.85rem;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid color-mix(in oklab, var(--foreground) 22%, transparent);
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: var(--text-sm, 0.875rem);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+.btn:disabled {
+  opacity: 1;
+  color: var(--muted);
+  border-color: color-mix(in oklab, var(--foreground) 12%, transparent);
+  cursor: default;
+}
+.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg, var(--background));
+  font-weight: 600;
+}
+.primary:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 88%, var(--foreground));
+}
+.skip {
+  border-color: transparent;
+  color: var(--muted);
+}
+.skip:hover:not(:disabled) {
+  color: var(--foreground);
+}
+
+.btn:focus-visible,
+.link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Tablet to small laptop: the cube launcher (right) and the résumé's download
+   pill (left) are both fixed at the bottom corners and the bar spans between
+   them, so it rides above them instead of over them. */
+@media (min-width: 768px) and (max-width: 1110px) {
+  .bar {
+    --lift: 4rem;
+  }
+}
+
+/* Phones: stack text over a full-width row of buttons, and sit above the dock. */
+@media (max-width: 767px) {
+  .bar {
+    grid-template-columns: minmax(0, 1fr);
+    width: calc(100vw - 1rem);
+    padding: 0.7rem 0.75rem;
+    --lift: 0px;
+    bottom: calc(var(--space-dock, 0rem) + max(0.5rem, env(safe-area-inset-bottom)) + 0.4rem);
+  }
+  .actions {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+  }
+}
+
+/* the wrapper only exists to hold the always-mounted live region */
+.root {
+  display: contents;
+}
+
+/* the stop's clock: a thin line along the top of the bar that fills while it holds */
+.progress {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  top: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+  transform-origin: left;
+  animation: fill linear both;
+  pointer-events: none;
+}
+@keyframes fill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.bar[data-reduced] .progress {
+  animation: none;
+  opacity: 0.35;
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ProjectMuseum from "@/components/museum/ProjectMuseum";
 import { exhibits, exhibitSlug } from "@/data/museum";
@@ -22,19 +22,21 @@ function exhibitIndex(exhibit: string | null) {
   return exhibit ? exhibits.findIndex((e) => exhibitSlug(e) === exhibit) : -1;
 }
 
-/** `/projects?exhibit=<slug>` opens that exhibit's room directly (used by the
- *  Skills page). This is resolved client-side so the page can still be exported. */
-export default function ProjectsPageClient() {
+/** `/projects/<slug>` (the shareable address, with its own link card) and the
+ *  older `/projects?exhibit=<slug>` both open that exhibit's room directly. The
+ *  query form is resolved client-side so the page can still be exported. */
+export default function ProjectsPageClient({ slug }: { slug?: string } = {}) {
   const searchParams = useSearchParams();
-  const exhibit = searchParams.get("exhibit");
-  const from = searchParams.get("from");
-  const tool = searchParams.get("tool");
-
-  const index = useMemo(() => exhibitIndex(exhibit), [exhibit]);
-  const returnTo = useMemo(
-    () => (index >= 0 ? returnFor(from, tool) : null),
-    [from, index, tool]
-  );
+  // Read once, on arrival: the museum rewrites the address as you move between
+  // rooms (/projects/<slug>, `from`/`tool` kept), and a later read would forget
+  // where you came in from — or invent an "Exit to home" for a hall visit.
+  const [{ index, returnTo }] = useState(() => {
+    const i = exhibitIndex(slug ?? searchParams.get("exhibit"));
+    return {
+      index: i,
+      returnTo: i >= 0 ? returnFor(searchParams.get("from"), searchParams.get("tool")) : null,
+    };
+  });
 
   return <ProjectMuseum initialExhibit={index >= 0 ? index : null} returnTo={returnTo} />;
 }

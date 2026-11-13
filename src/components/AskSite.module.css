@@ -1,0 +1,334 @@
+/* "Ask the site" — the body of the command palette's dialog when in ask mode.
+   Colours are the site tokens, so Night Workshop and Lavender newsprint both
+   work with no theme branches. */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  max-height: min(78vh, 40rem);
+  min-height: 0;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+
+.back,
+.esc {
+  min-height: 2.75rem;
+  padding: 0 0.6rem;
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-xs, 0.8125rem);
+  cursor: pointer;
+}
+.esc {
+  margin-left: auto;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: var(--text-2xs, 0.75rem);
+}
+.back:hover,
+.esc:hover {
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+.title {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: var(--text-xs, 0.8125rem);
+  color: var(--foreground);
+}
+
+.form {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+.prompt {
+  color: var(--accent);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: var(--text-base, 1rem);
+}
+.input {
+  flex: 1;
+  min-width: 0;
+  min-height: 2.75rem;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--foreground);
+  font: inherit;
+  font-size: max(var(--text-base, 1rem), 16px); /* no iOS focus-zoom */
+}
+.input::placeholder {
+  color: var(--muted);
+}
+.input[readonly] {
+  opacity: 0.7;
+}
+.count {
+  flex: none;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: var(--text-2xs, 0.75rem);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.count[data-warn="true"] {
+  color: var(--status-warn, var(--foreground));
+  font-weight: 600;
+}
+.send {
+  flex: none;
+  min-height: 2.75rem;
+  min-width: 4.25rem;
+  padding: 0 1rem;
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  background: var(--accent);
+  color: var(--accent-fg);
+  font: inherit;
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: 600;
+  cursor: pointer;
+}
+.send:disabled {
+  background: color-mix(in oklab, var(--foreground) 10%, transparent);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.back:focus-visible,
+.esc:focus-visible,
+.send:focus-visible,
+.chip:focus-visible,
+.link:focus-visible,
+.body:focus-visible {
+  outline: 2px solid var(--ring, var(--accent));
+  outline-offset: 2px;
+}
+.form:focus-within .input {
+  outline: none;
+}
+/* the input has no box of its own, so the whole row shows focus */
+.form:has(.input:focus-visible) {
+  box-shadow: inset 0 0 0 2px var(--ring, var(--accent));
+}
+
+.body {
+  overflow: auto;
+  min-height: 0;
+  padding: 0 1rem;
+}
+.exchange {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem 0 0.6rem;
+}
+.q,
+.a {
+  display: grid;
+  grid-template-columns: 2.4rem 1fr;
+  gap: 0.5rem;
+  margin: 0;
+}
+.who {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: var(--text-2xs, 0.75rem);
+  color: var(--muted);
+  padding-top: 0.2rem;
+}
+.q {
+  color: var(--muted);
+  font-size: var(--text-sm, 0.875rem);
+  overflow-wrap: anywhere;
+}
+.q .who {
+  color: var(--accent);
+}
+.answer {
+  margin: 0;
+  color: var(--foreground);
+  font-size: var(--text-md, 0.9375rem);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  animation: rise 220ms var(--ease-out, ease-out) both;
+}
+.aBody {
+  min-width: 0;
+}
+/* a project or page the answer named: underlined, so it isn't colour alone */
+.srcLink {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  border-radius: 2px;
+}
+.srcLink:hover {
+  text-decoration-thickness: 2px;
+}
+.srcLink:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.sources {
+  margin: 0.6rem 0 0;
+  color: var(--muted);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: var(--text-xs, 0.8125rem);
+  line-height: 1.7;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  padding-left: 2.9rem;
+  color: var(--muted);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: var(--text-xs, 0.8125rem);
+}
+.dots {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+.dots i {
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: blink 1s ease-in-out infinite;
+}
+.dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.error {
+  margin: 0;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid color-mix(in oklab, var(--status-error, #c53030) 55%, transparent);
+  background: color-mix(in oklab, var(--status-error, #c53030) 10%, transparent);
+  color: var(--foreground);
+  font-size: var(--text-sm, 0.875rem);
+  line-height: 1.5;
+}
+.link {
+  color: var(--accent);
+  text-underline-offset: 3px;
+}
+
+.chipsWrap {
+  padding: 0 1rem;
+}
+.chips {
+  padding: 0.9rem 0 0.4rem;
+}
+.chipsLabel {
+  margin: 0 0 0.5rem;
+  font-size: var(--text-xs, 0.8125rem);
+  color: var(--muted);
+}
+.chipList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.chip {
+  min-height: 2.75rem;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid color-mix(in oklab, var(--foreground) 18%, transparent);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--foreground) 4%, transparent);
+  color: var(--foreground);
+  font: inherit;
+  font-size: var(--text-sm, 0.875rem);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 120ms var(--ease-out, ease-out),
+    border-color 120ms var(--ease-out, ease-out);
+}
+.chip:hover {
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+  border-color: color-mix(in oklab, var(--accent) 55%, transparent);
+}
+
+.foot {
+  margin: 0;
+  padding: 0.6rem 1rem 0.75rem;
+  border-top: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
+  font-size: var(--text-2xs, 0.75rem);
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .answer {
+    animation: none;
+  }
+  .dots i {
+    animation: none;
+    opacity: 0.8;
+  }
+  .chip {
+    transition: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .form {
+    flex-wrap: wrap;
+  }
+  .input {
+    flex: 1 1 calc(100% - 2rem);
+  }
+  .count {
+    margin-left: auto;
+  }
+  .send {
+    flex: 1;
+  }
+}

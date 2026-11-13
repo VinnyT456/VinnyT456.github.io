@@ -1,4 +1,5 @@
 import TransitionLink from "@/components/transitions/TransitionLink";
+import ResumeDock from "@/components/ResumeDock";
 import { site } from "@/data/site";
 import { exhibits, exhibitSlug } from "@/data/museum";
 import { skills, type Skill } from "@/data/skills";
@@ -41,6 +42,9 @@ export default function Resume() {
       (acc[s.category] ??= []).push(s);
       return acc;
     }, {});
+
+  // the tools the Skills section actually lists, so the facts line matches what's below it
+  const toolCount = Object.values(toolsByCategory).reduce((n, list) => n + list.length, 0);
 
   return (
     <main id="main" className="rez page-stage flex-1">
@@ -85,7 +89,24 @@ export default function Resume() {
           <span className="rez__meta-sep" aria-hidden>
             /
           </span>
-          {skills.length} tools
+          {toolCount} tools
+        </p>
+
+        {/* how to reach me, on the page itself */}
+        <p className="rez__contact font-mono">
+          <a href={`mailto:${site.email}`}>{site.email}</a>
+          <span className="rez__meta-sep" aria-hidden>
+            /
+          </span>
+          <a href={site.github} target="_blank" rel="noopener noreferrer">
+            GitHub
+          </a>
+          <span className="rez__meta-sep" aria-hidden>
+            /
+          </span>
+          <a href={site.linkedin} target="_blank" rel="noopener noreferrer">
+            LinkedIn
+          </a>
         </p>
 
         <article className="rez__sheet" aria-label="Résumé">
@@ -129,6 +150,7 @@ export default function Resume() {
                     <p className="rez__entry-when font-mono">{r.dates}</p>
                   </div>
                   <p className="rez__entry-where">{r.location}</p>
+                  {r.highlights.length === 0 && r.note ? <p className="rez__note">{r.note}</p> : null}
                   {r.highlights.length > 0 ? (
                     <ul className="rez__bullets">
                       {r.highlights.slice(0, 3).map((h) => (
@@ -200,6 +222,7 @@ export default function Resume() {
           </nav>
         </footer>
       </div>
+      {hasPdf ? <ResumeDock href={pdf} /> : null}
     </main>
   );
 }

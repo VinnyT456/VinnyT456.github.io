@@ -62,14 +62,11 @@ export default function LoaderFrame({
       className={`fixed inset-0 overflow-hidden transition-opacity duration-700 ease-[var(--ease-out)] ${zClassName} ${
         fading ? "bg-transparent opacity-0" : "bg-background opacity-100"
       } ${className}`}
-      style={
-        revealMask
-          ? {
-              WebkitMaskImage: revealMask,
-              maskImage: revealMask,
-            }
-          : undefined
-      }
+      style={{
+        // crossing light↔dark under the overlay, its paper/ink eases over rather than flipping
+        transition: "opacity 700ms var(--ease-out), background-color 500ms var(--ease-out)",
+        ...(revealMask ? { WebkitMaskImage: revealMask, maskImage: revealMask } : null),
+      }}
     >
       {srStatus ? <p className="sr-only">{srStatus}</p> : null}
 

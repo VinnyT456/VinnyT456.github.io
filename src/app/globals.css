@@ -1,11 +1,16 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* Dark is the only theme: the night tokens live directly on :root. The .dark
-   class stays hard-coded on <html> so Tailwind's dark: variant still matches. */
+/* Two themes. The night tokens live on :root (dark is the default and the
+   only theme on pages without a light design yet); light overrides them under
+   :root[data-theme="light"], set before paint by the <head> script. The .dark
+   class follows the theme so Tailwind's dark: variant matches. */
 @custom-variant dark (&:where(.dark, .dark *));
 
-:root {
+:root,
+/* the cube world is always night, whatever the page's theme: its UI reads these same tokens, re-declared on it */
+.cube-world {
+  color-scheme: dark;
   /* Night workshop — the only theme. Hue locked to workshop violet. */
   --background: oklch(0.136 0.012 293); /* near-black with chroma toward violet, not flat #000 */
   --foreground: oklch(0.946 0.008 293);
@@ -27,21 +32,57 @@
   --cube-blue: #3b82f6;
   --cube-indigo: #6366f1;
   --cube-white: #f8f8ff;
+  /* The cube's six stickers as flat UI wears them (nav icon, palette, the
+     page transition's cube and its burst): same face order as CUBE_COLORS.
+     Night is the lit cube; day is the printed one (--cube-l1…6). */
+  --sticker-1: #8b5cf6;
+  --sticker-2: #3b82f6;
+  --sticker-3: #f8f8ff;
+  --sticker-4: #6366f1;
+  --sticker-5: #0ea5e9;
+  --sticker-6: #3a3a48;
+  /* Overlay surfaces: the dimming behind a modal, and the panel on it */
+  --scrim: color-mix(in oklab, var(--museum-deep) 68%, transparent);
+  --panel: color-mix(in oklab, var(--background) 94%, var(--museum-deep));
+  /* The lift under floating chrome: tinted by the canvas at night (so it
+     reads as depth, not a halo); by day, violet-ink, scaled down. */
+  --lift: var(--background);
+  --lift-k: 1;
+  /* The page transition's portal: night's void, its rim, and (by day) paper */
+  --void-core: #040407;
+  --void: #08080b;
+  --void-rim: #ededed;
+  /* the burst's particles: how much heavier they're drawn (size, opacity). Light
+     dots on night glow on their own; dark dots on paper need more body. */
+  --burst-size: 1;
+  --burst-alpha: 1;
+  /* the portal's orbit rings: how much heavier they're drawn (opacity, line width) */
+  --ring-alpha: 1;
+  --ring-width: 1;
   /* One-off atmosphere colours, each owned by one surface (DESIGN.md §2) */
   --atmosphere-steel: #5b7bd6; /* .site-atmosphere lower wash */
-  --flood-warm: #fffaf0;       /* museum doors white-out */
-  --flood-cream: #fdf6e8;
+  --flood-warm: #fff3dc;       /* the doors' light: lamp-warm white */
+  --flood-cream: #fff3dc;
+  --flood-dip: #0a0820;        /* the street falls to deep night indigo, never flat black */
+  --flood-glow: #ffbf66;       /* amber lamplight spilling from inside */
+  --flood-fill: radial-gradient(ellipse 80% 90% at 50% 46%, #fffaf0 0%, var(--flood-warm) 45%, color-mix(in oklab, var(--flood-warm) 82%, var(--flood-glow)) 100%);
   --term-cyan: oklch(0.85 0.13 200); /* About terminal ASCII avatar */
   --term-violet: oklch(0.74 0.12 285);
   --term-magenta: oklch(0.7 0.22 330);
   --term-pink: oklch(0.84 0.11 350);
   --term-cream: oklch(0.92 0.04 80);
-  --term-dark: oklch(0.32 0.05 285);
+  --term-dark: oklch(0.5 0.06 285); /* 3:1+ on the night window: the avatar's ears are graphics that must read */
   /* The museum's own darker night, and its pure-white signage ink */
   --museum-night: #0a0c12;
   --museum-deep: #05060a;
   --museum-ink: #fff;
+  --museum-sky: #000; /* the page base behind the museum: black by night, paper by day */
   --ink-on-light: #0b0b0f; /* text on light (ink-filled) buttons */
+  /* surfaces that sit one step off the canvas: the museum stage behind a
+     case, and a window's title bar */
+  --stage: color-mix(in oklab, var(--background) 70%, black);
+  --chrome: color-mix(in oklab, var(--background) 60%, black);
+  --particle-far: #5b7bd6; /* the backdrop's far stars */
   /* 4pt scale. Tight group = xs/sm; between units = md; between sections = xl */
   --space-xs: 0.5rem;
   --space-sm: 0.75rem;
@@ -91,6 +132,75 @@
   --z-loader: 70;
   --z-modal: 85;
   --z-transition: 100;
+}
+
+/* Daylight, "Lavender newsprint": newsprint's black ink on a white page with
+   the faintest lilac cast, and the same violet as the one accent. Checked on
+   the canvas: foreground 18.9:1, muted 7.2:1, accent 6.4:1. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --background: #f7f6fb;
+  --foreground: #0e0c16;
+  --accent: #5b2fe0;
+  --accent-fg: #ffffff;
+  --muted: #55526a;
+  --surface: #ffffff;
+  --status-live: #15803d;
+  --status-warn: #a15c07;
+  --status-error: #c53030;
+  --status-error-soft: #b42318;
+  --particle: #6d4ae0; /* the same starfield, in violet ink */
+  --particle-far: #a99be6;
+  --shade: #1a1240; /* shadows tinted violet-ink, never grey */
+  --ring: #5b2fe0;
+  --stage: #efecf8;
+  --chrome: #f1eff8;
+  /* the cube, printed: six inked stickers (three/cubeColors.ts reads these) */
+  /* same face roles as the night cube, re-inked: purple, blue, ink (the
+     white face), indigo, sky, and lilac where night has its dark slate */
+  --cube-l1: #5b2fe0;
+  --cube-l2: #2c5bd6;
+  --cube-l3: #14112a;
+  --cube-l4: #4338ca;
+  --cube-l5: #0a74b8;
+  --cube-l6: #9d8fe0;
+  /* the plastic cube by day (hero + loader): lit stickers on ink plastic, like a real one */
+  --cube-solid-1: #7a4cf0;
+  --cube-solid-2: #2f6bf0;
+  --cube-solid-3: #f1eefc;
+  --cube-solid-4: #5457e8;
+  --cube-solid-5: #16a8e6;
+  --cube-solid-6: #a99be6;
+  --cube-solid-gap: #14112a;
+  /* the museum doorway's white-out: pale lilac by day (the museum has no warm light by day) */
+  --flood-warm: #f7f5ff;
+  --flood-cream: #ece8fb;
+  --flood-dip: #d9d3f6;        /* by day the street dips to pale lilac, not black */
+  --flood-glow: #c4bbff;       /* a cool lilac sky-light */
+  --flood-fill: radial-gradient(ellipse 80% 90% at 50% 46%, #ffffff 0%, var(--flood-warm) 45%, color-mix(in oklab, var(--flood-warm) 82%, var(--flood-glow)) 100%);
+  --museum-sky: var(--background);
+  --sticker-1: var(--cube-l1);
+  --sticker-2: var(--cube-l2);
+  --sticker-3: var(--cube-l3);
+  --sticker-4: var(--cube-l4);
+  --sticker-5: var(--cube-l5);
+  --sticker-6: var(--cube-l6);
+  --scrim: color-mix(in oklab, var(--shade) 38%, transparent);
+  --panel: var(--surface);
+  --lift: var(--shade);
+  --lift-k: 0.45;
+  /* by day the transition's portal is the page itself: paper, ringed in the accent */
+  --void-core: color-mix(in oklab, var(--accent) 14%, var(--background));
+  --void: color-mix(in oklab, var(--accent) 6%, var(--background));
+  --void-rim: var(--accent);
+  --burst-size: 1.18;
+  --burst-alpha: 1.2;
+  --ring-alpha: 2.3;
+  --ring-width: 1.7;
+}
+/* by day the haze is one soft violet light from above, nothing at the floor */
+:root[data-theme="light"] .site-atmosphere {
+  background: radial-gradient(110% 70% at 50% -12%, color-mix(in oklab, var(--accent) 9%, transparent), transparent 62%);
 }
 
 /* Maps the tokens into Tailwind utilities (bg-surface, text-muted,
@@ -194,6 +304,14 @@ html.custom-cursor-active * {
    the ring/dot sat parked at the top-left corner on phones. */
 html:not(.custom-cursor-active) .custom-cursor__ring,
 html:not(.custom-cursor-active) .custom-cursor__dot { display: none; }
+/* a native modal <dialog> (the museum's floor plan, visitor book) renders in the top layer, above
+   any z-index: the custom cursor would be under it, so the system pointer takes over while one is open */
+html.custom-cursor-active body:has(dialog[open]) .custom-cursor__ring,
+html.custom-cursor-active body:has(dialog[open]) .custom-cursor__dot { display: none; }
+html.custom-cursor-active:has(dialog[open]),
+html.custom-cursor-active:has(dialog[open]) * { cursor: auto !important; }
+html.custom-cursor-active:has(dialog[open]) :is(a, button, [role="button"], label, summary) { cursor: pointer !important; }
+html.custom-cursor-active:has(dialog[open]) :is(input, textarea) { cursor: text !important; }
 /* until the pointer moves onto the page (and after it leaves), no cursor */
 html:not(.cursor-moved) .custom-cursor__ring,
 html:not(.cursor-moved) .custom-cursor__dot { opacity: 0; }
@@ -202,7 +320,8 @@ html:not(.cursor-moved) .custom-cursor__dot { opacity: 0; }
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 90;
+  /* above every layer on the site (the Skills panels sit at 120–130), so it never slides under one */
+  z-index: 2147483646;
   width: 36px;
   height: 36px;
   margin: -18px 0 0 -18px;
@@ -234,7 +353,7 @@ html:not(.cursor-moved) .custom-cursor__dot { opacity: 0; }
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 91;
+  z-index: 2147483647;
   width: 6px;
   height: 6px;
   margin: -3px 0 0 -3px;
@@ -355,7 +474,7 @@ html:has(.museum--world) .cube-nav-launcher { display: none; }
   background: color-mix(in oklab, var(--background) 76%, transparent);
   backdrop-filter: blur(16px);
   /* Floating over the hero: blur + border carry separation; a light lift, not a card drop. */
-  box-shadow: 0 2px 10px color-mix(in oklab, var(--background) 28%, transparent);
+  box-shadow: 0 2px 10px color-mix(in oklab, var(--lift) calc(28% * var(--lift-k)), transparent);
   transition:
     border-color 420ms var(--ease-out),
     background-color 420ms var(--ease-out),
@@ -383,7 +502,7 @@ html:has(.museum--world) .cube-nav-launcher { display: none; }
   background: color-mix(in oklab, var(--background) 88%, transparent);
   box-shadow:
     0 0 0 1px color-mix(in oklab, var(--accent) 6%, transparent),
-    0 14px 36px color-mix(in oklab, var(--background) 50%, transparent);
+    0 14px 36px color-mix(in oklab, var(--lift) calc(50% * var(--lift-k)), transparent);
 }
 
 .nav-links {
@@ -865,6 +984,41 @@ html:has(.museum--world) .cube-nav-launcher { display: none; }
   transform: rotateY(-90deg);
 }
 
+/* By day the transition cube is a printed one: white plastic washed with
+   lilac, a hairline edge and a faint violet glow (not the night cube's dark
+   glass), stickers bevelled in the printed colours, and a label card that
+   fades from white to lilac over a violet underline. */
+:root[data-theme="light"] .flat-cube__body {
+  padding: 5px;
+  background: color-mix(in oklab, var(--accent) 7%, var(--surface));
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--accent) 24%, transparent),
+    0 14px 34px color-mix(in oklab, var(--shade) 18%, transparent),
+    0 0 44px color-mix(in oklab, var(--accent) 16%, transparent);
+}
+:root[data-theme="light"] .flat-cube__grid {
+  gap: 4px;
+}
+:root[data-theme="light"] .flat-cube__cell {
+  border: 1px solid color-mix(in oklab, white 40%, transparent);
+  box-shadow:
+    inset 0 -3px 0 color-mix(in oklab, var(--shade) 20%, transparent),
+    inset 0 2px 0 color-mix(in oklab, white 26%, transparent);
+}
+:root[data-theme="light"] .flat-cube__body--label {
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklab, var(--accent) 13%, var(--surface)),
+    var(--surface) 58%,
+    color-mix(in oklab, var(--cube-l5) 11%, var(--surface))
+  );
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--accent) 24%, transparent),
+    0 14px 34px color-mix(in oklab, var(--shade) 18%, transparent),
+    0 0 44px color-mix(in oklab, var(--accent) 16%, transparent),
+    inset 0 -6px 0 var(--accent);
+}
+
 @media print {
   .skip-link,
   .site-header,
@@ -958,13 +1112,15 @@ html:has(.museum--world) .cube-nav-launcher { display: none; }
   backdrop-filter: blur(14px);
   box-shadow:
     0 0 0 1px color-mix(in oklab, var(--accent) 5%, transparent),
-    0 12px 32px color-mix(in oklab, var(--background) 45%, transparent);
+    0 12px 32px color-mix(in oklab, var(--lift) calc(45% * var(--lift-k)), transparent);
   cursor: pointer;
   transition:
     transform 320ms var(--ease-out),
     border-color 320ms var(--ease-out),
     box-shadow 320ms var(--ease-out);
 }
+
+.cube-nav-trigger:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
 
 @media (hover: hover) {
   .cube-nav-trigger:hover {
@@ -1023,13 +1179,6 @@ html:has(.museum--world) .cube-nav-launcher { display: none; }
   55% { transform: rotateY(360deg) scale(1.18); }
   100% { transform: rotateY(360deg) scale(1); }
 }
-.cube-nav-menu__tool--accent {
-  color: var(--accent);
-  border-color: color-mix(in oklab, var(--accent) 40%, transparent);
-}
-.cube-nav-menu__tool--accent:hover {
-  background: color-mix(in oklab, var(--accent) 14%, transparent);
-}
 
 .cube-nav-icon__grid {
   display: grid;
@@ -1079,7 +1228,7 @@ html:has(.museum--world) .cube-nav-launcher { display: none; }
   backdrop-filter: blur(16px);
   box-shadow:
     0 0 0 1px color-mix(in oklab, var(--accent) 6%, transparent),
-    0 18px 44px color-mix(in oklab, var(--background) 50%, transparent);
+    0 18px 44px color-mix(in oklab, var(--lift) calc(50% * var(--lift-k)), transparent);
   opacity: 0;
   transform: translateY(0.5rem) scale(0.94);
   transform-origin: bottom right;
@@ -1223,6 +1372,19 @@ html:has(.museum--world) .cube-nav-launcher { display: none; }
   }
 }
 
+/* the accent tool: declared after its base, and doubled, so it wins the cascade
+   (it used to come first, so Solve it never showed the accent) */
+.cube-nav-menu__tool.cube-nav-menu__tool--accent {
+  color: var(--accent);
+  border-color: color-mix(in oklab, var(--accent) 40%, transparent);
+}
+@media (hover: hover) {
+  .cube-nav-menu__tool.cube-nav-menu__tool--accent:hover {
+    border-color: color-mix(in oklab, var(--accent) 60%, transparent);
+    background: color-mix(in oklab, var(--accent) 14%, transparent);
+  }
+}
+
 .cube-nav-menu__sticker {
   width: 0.7rem;
   height: 0.7rem;
@@ -1362,9 +1524,12 @@ html.reduce-motion *::after {
 .term {
   flex: 1 1 auto;
   min-height: 0;
-  /* Hard height cap so the scrollback scrolls INSIDE the window instead of
-     growing the page. Accounts for the site header + footer + page padding. */
-  max-height: calc(100svh - 11rem);
+  /* A fixed height, so the scrollback scrolls INSIDE the window instead of
+     growing the page (and the window doesn't jump taller after the first long
+     answer). The reserve is the nav, page padding and footer (with its
+     margin): the page fits one screen exactly. */
+  --term-h: calc(100svh - 15rem);
+  height: var(--term-h);
   display: flex;
   flex-direction: column;
   max-width: 60rem;
@@ -1381,11 +1546,37 @@ html.reduce-motion *::after {
    screen and pushes the prompt out of reach. Reclaim space, but still clear the
    fixed dock below the breakpoint so the input line isn't hidden behind it. */
 @media (max-height: 560px) {
-  .term { max-height: calc(100svh - 4rem); }
+  .term { --term-h: calc(100svh - 4rem); }
 }
 @media (max-height: 560px) and (max-width: 767px) {
-  .term { max-height: calc(100svh - 4rem - var(--space-dock)); }
+  .term { --term-h: calc(100svh - 4rem - var(--space-dock)); }
 }
+/* phones: the home mark above and the footer cleared over the dock below */
+@media (max-width: 767px) and (pointer: coarse) and (min-height: 561px) {
+  .term { --term-h: calc(100svh - 15.5rem); }
+}
+
+/* by day the shell is a sheet on the page: a window one breath lighter than
+   the paper (the Catppuccin Latte idea: tinted, not pasted-on white), newsprint
+   ink, the violet prompt. Checked on #fbfaff: ink 19:1, dim 7.3:1, faint
+   5.9:1, accent 6.9:1, error 5.2:1. */
+:root[data-theme="light"] .term-page {
+  --t-bg: #fbfaff;
+  --t-ink: #0e0c16;
+  --t-dim: #55526a;
+  --t-faint: #625f78;
+  --t-accent: #5b2fe0;
+  --t-error: #c53030;
+  --t-border: color-mix(in oklab, #0e0c16 14%, transparent);
+  /* the art tones inked down for paper (git diff's + line, the ASCII avatar fallback) */
+  --term-cyan: #0a74b8;
+  --term-violet: #5b2fe0;
+  --term-magenta: oklch(0.5 0.2 330);
+  --term-pink: oklch(0.55 0.16 350);
+  --term-cream: oklch(0.52 0.09 70);
+  --term-dark: #3a3548;
+}
+:root[data-theme="light"] .term__bar { background: var(--chrome); }
 
 /* minimal titlebar */
 .term__bar {
@@ -1408,6 +1599,10 @@ html.reduce-motion *::after {
   background: color-mix(in oklab, var(--t-ink) 20%, transparent);
 }
 .term__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--text-xs);
   color: var(--t-faint);
 }
@@ -1417,12 +1612,15 @@ html.reduce-motion *::after {
   font-weight: 500;
   color: var(--t-ink);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* scrollback */
 .term__scroll {
   flex: 1;
   min-height: 0;
+  /* a container, so output's hanging indents can be capped in its own units (cqi) */
+  container-type: inline-size;
   overflow-y: auto;
   padding: 0.9rem 1rem 1.1rem;
   font-size: var(--text-sm);
@@ -1431,6 +1629,21 @@ html.reduce-motion *::after {
   scrollbar-width: thin;
   scrollbar-color: var(--t-border) transparent;
 }
+/* scrollback off screen skips layout: every keystroke used to lay out all of it
+   (the caret's scrollIntoView), so a long session typed slower and slower */
+.term__scroll > .term__entry { content-visibility: auto; contain-intrinsic-size: auto 160px; }
+/* hanging indents: wrapped text lines up under the value column */
+.term__line--hung { padding-left: var(--hang); text-indent: calc(-1 * var(--hang)); }
+/* a phone-width window: a wide first column takes its own line, the text goes under it */
+@container (max-width: 40rem) {
+  /* the name hangs under its own indent if it wraps; the description sits 2ch further in */
+  .term__line--split { padding-left: calc(var(--lead) - 2ch); text-indent: calc(2ch - var(--lead)); }
+  .term__line--split > .term__hr { display: block; padding-left: 2ch; text-indent: 0; }
+}
+/* focused only by script (a program closing on a phone): no ring, it isn't a control */
+.term__scroll:focus { outline: none; }
+/* nothing scrolls the output sideways (a caret scrolled into view, a stray wide line) */
+.term__scroll { overflow-x: clip; }
 .term__scroll::-webkit-scrollbar { width: 8px; }
 .term__scroll::-webkit-scrollbar-thumb {
   background: var(--t-border);
@@ -1446,12 +1659,19 @@ html.reduce-motion *::after {
   align-items: baseline;
 }
 .term__cmd { color: var(--t-ink); white-space: pre-wrap; word-break: break-word; }
+/* the first word wraps exactly as the live line drew it (a word longer than a line still breaks) */
+.term__cmd-head { overflow-wrap: anywhere; }
 
 /* prompt */
 .term__prompt { white-space: nowrap; }
 .term__user { color: var(--t-accent); }
 .term__path { color: var(--t-dim); }
 .term__sep { color: var(--t-faint); }
+.term__branch { color: var(--t-dim); }
+.term__fail { color: var(--t-error); }
+/* (reverse-i-search)`query': match — bash's own wording, dim like a prompt */
+.term__isearch { color: var(--t-dim); white-space: pre; }
+.term__cmdline--search { gap: 0; }
 
 /* output */
 .term__output { margin-top: 0.1rem; }
@@ -1465,7 +1685,65 @@ html.reduce-motion *::after {
 .term__line--hang { padding-left: 4ch; text-indent: -4ch; }
 .term__line--accent { color: var(--t-accent); }
 .term__line--error { color: var(--t-error); }
+.term__line--removed { color: var(--t-error); } /* a diff's - line: output that happens to be red */
 .term__line--prompt { color: var(--t-accent); }
+/* full-window programs */
+.term { position: relative; }
+.term__app { padding-top: 0.1rem; }
+.term__sl { overflow: hidden; padding: 0.5rem 0; }
+.term__sl-track { animation: sl-run 4.6s linear forwards; }
+@keyframes sl-run { from { transform: translateX(100%); } to { transform: translateX(-53ch); } }
+/* cmatrix rains over the scrollback, below the title bar */
+.term__matrix { position: absolute; inset: 2.45rem 0 0; z-index: 2; background: var(--t-bg); cursor: pointer; }
+.term__matrix canvas { display: block; width: 100%; height: 100%; }
+/* focus is moved into these programmatically; the running program is the indicator */
+.term__matrix:focus, .term__sl:focus { outline: none; }
+.term__matrix-hint {
+  position: absolute; right: 0.75rem; bottom: 0.6rem; padding: 0.15rem 0.5rem; border-radius: 9999px;
+  background: color-mix(in oklab, var(--t-bg) 85%, transparent); color: var(--t-dim); font-size: var(--text-xs);
+}
+.term__matrix-coarse { display: none; }
+@media (pointer: coarse) { .term__matrix-fine { display: none; } .term__matrix-coarse { display: inline; } }
+
+/* ls on a terminal: names in as many columns as fit, widest name + 2 */
+.term__grid { display: grid; grid-template-columns: repeat(auto-fill, var(--col)); white-space: pre; }
+/* a click-to-run name (ls entries, help commands): text until you point at it */
+.term__run {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline transparent;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.15s ease;
+}
+.term__run.term__line--accent { color: var(--t-accent); }
+/* the text stays on the sentence's baseline; an invisible 24px-tall layer is
+   the tap target, so a column of names (ls, help) meets the 24px spacing */
+.term__run { position: relative; }
+/* at least 24×24, centred on the name: a two-letter name (cd, sl) still meets 2.5.8's spacing */
+.term__run::after { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 24px); height: 24px; transform: translate(-50%, -50%); }
+/* a wrapped name (ls -l on a phone) starts at the top of its row, beside its metadata */
+.term__line--hung .term__run { vertical-align: top; }
+/* a row holding names is at least 24px tall, so neighbouring rows' targets never overlap */
+.term__line:has(.term__run), .term__line:has(.term__link), .term__grid { line-height: max(24px, 1.55em); }
+/* inside a quiet hint line a command would vanish into the sentence: always underlined, dotted, full strength */
+.term__line--muted .term__run { text-decoration: underline dotted currentColor; }
+.term__run:hover { text-decoration-color: currentColor; }
+@media (pointer: coarse) {
+  .term__run { text-decoration: underline dotted currentColor; }
+}
+/* grep --color: the hit itself, same accent, heavier */
+.term__line--match {
+  color: var(--t-accent);
+  font-weight: 600;
+  background: color-mix(in oklab, var(--t-accent) 14%, transparent);
+  border-radius: 2px;
+}
 /* art tones — colored ASCII (whoami avatar). Glitch palette, kept muted enough
    to sit on the dark ground without shouting. */
 .term__line--cyan { color: var(--term-cyan); }
@@ -1481,12 +1759,33 @@ html.reduce-motion *::after {
   scrollbar-width: none;
 }
 .term__line--mono::-webkit-scrollbar { display: none; }
+/* drawn art (neofetch's box, cowsay, top's meters): rows close up so strokes join */
+.term__line--art { line-height: 1.2; overflow-y: hidden; }
+/* phones: a hidden sideways scroll reads as cut-off text, so tables wrap (their
+   rows hang under the second column, set inline); art keeps its columns and
+   is sized to fit where it matters (cowsay, top), clipped where it can't */
+/* table rows (help, man, git) wrap at every width, hanging under their columns: a long man
+   DESCRIPTION used to run off a desktop window with no scrollbar */
+.term__line--table { white-space: pre-wrap; overflow-x: visible; }
+/* an option flag wraps as a whole (-maxdepth, never "-" then "maxdepth") */
+.term__flag { white-space: nowrap; }
+@media (max-width: 640px) {
+  .term__line--mono:not(.term__line--table) { overflow: hidden; }
+  /* the train is wider than a phone on purpose: it rides across, clipped only by its track */
+  .term__sl .term__line--mono { overflow-x: visible; }
+}
 .term__link {
+  position: relative;
   color: var(--t-accent);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+/* the same 24px tap layer as a clickable name ("step inside →" rows sit close together) */
+.term__link::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 24px; transform: translateY(-50%); }
 .term__link:hover { color: var(--t-ink); }
+/* a quiet link (a row's "step inside →"): dim until pointed at */
+.term__link.term__line--muted { color: var(--t-dim); }
+.term__link.term__line--muted:hover { color: var(--t-accent); }
 
 /* subtle, fast output reveal — no movie-hacker typing */
 .term__output--reveal {
@@ -1499,7 +1798,26 @@ html.reduce-motion *::after {
 
 /* live input: transparent real input over a mirror that draws the cursor */
 .term__cmdline--live { flex-wrap: nowrap; }
+/* the prompt is drawn beside the line on wide screens, inside it on phones */
+.term__lead--inner { display: none; }
+@media (max-width: 640px) {
+  /* past commands flow the same way: prompt and command on one wrapping line */
+  .term__cmdline { display: block; }
+  /* a long prompt wraps (spaces first, then anywhere) instead of pushing the window sideways;
+     the space after it is where a command breaks onto the next line */
+  .term__cmdline .term__prompt { white-space: normal; overflow-wrap: anywhere; }
+  /* one flowing line: long input wraps back under the prompt, not in a column beside it */
+  .term__cmdline--live { display: block; }
+  .term__lead--outer { display: none; }
+  .term__lead--inner { display: inline; }
+  /* one space wide, like the real space after a past command's prompt (the command doesn't jump on Enter) */
+  .term__lead--inner.term__prompt { margin-right: 1ch; }
+}
+/* the bell: Tab with nothing to complete flashes the line once */
+.term__cmdline--bell { animation: term-bell 180ms ease-out; }
+@keyframes term-bell { from { background: color-mix(in oklab, var(--t-error) 16%, transparent); } to { background: transparent; } }
 .term__inputwrap {
+  display: block; /* a span: without this, on phones (block flow) it's inline and the field misaligns */
   position: relative;
   flex: 1;
   min-width: 0;
@@ -1508,60 +1826,74 @@ html.reduce-motion *::after {
    input has focus, a hollow block when it doesn't. No box around the line. */
 .term__inputwrap:not(:has(.term__input:focus)) .term__cursor {
   background: transparent;
+  color: inherit;
   box-shadow: inset 0 0 0 1px var(--t-accent);
   animation: none;
 }
 .term__input {
   position: absolute;
-  /* the real input is invisible (the mirror draws the text); it reaches a
-     little above and below the line so it's a full 44px to tap */
-  inset: calc((100% - 2.75rem) / 2) 0;
+  /* the real field is invisible (the mirror draws the text). It wraps exactly
+     like the mirror (same font, same wrapping, the prompt's width as
+     text-indent on phones), so a tap lands on the character under it. It
+     reaches a little above the line and down into the window's bottom padding
+     (its own padding keeps the text aligned), so even one line is a 44px target. */
+  inset: -0.35rem 0 -1.05rem;
   width: 100%;
+  padding: 0.35rem 0 1.05rem;
   background: transparent;
   border: 0;
   outline: none;
+  resize: none;
+  overflow: hidden;
   color: transparent;
   caret-color: transparent;
   font: inherit;
-  padding: 0;
+  line-height: inherit;
+  letter-spacing: inherit;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 /* iOS Safari auto-zooms any focused input whose font is < 16px. The visible
    text is the mirror, so bumping the transparent real input to 16px on touch
    only kills the zoom-jump — it doesn't change what's rendered. */
+/* phones: 16px everywhere in the shell (iOS zooms a field under 16px), so a
+   submitted line doesn't shrink into a smaller scrollback */
 @media (max-width: 767px) {
-  .term__input { font-size: 16px; }
+  .term__scroll { font-size: 16px; }
 }
 .term__mirror {
+  display: block;
   white-space: pre-wrap;
   word-break: break-word;
+  overflow-wrap: break-word; /* the same wrap rules as the field over it */
   color: var(--t-ink);
   pointer-events: none;
 }
-/* Block caret that OVERLAYS the following glyph instead of taking its own
-   column — so `cle` + caret + `ar` reads as "clear" with the caret on the
-   `a`, never "cle ar". Zero layout width via a full negative margin. */
+/* A full-cell block caret drawn ON the character it sits on, that character
+   inverted (window colour on accent), like a real terminal: `cle` + caret on
+   `a` + `r` still reads "clear". Blinking swaps the cell, never hides the letter. */
 .term__cursor {
-  display: inline-block;
-  width: 0.6ch;
-  margin-right: -0.6ch;
-  height: 1.05em;
-  vertical-align: text-bottom;
   background: var(--t-accent);
-  opacity: 0.85;
+  color: var(--t-bg);
   animation: term-blink 1.05s steps(1) infinite;
-  position: relative;
-  z-index: 0;
 }
 .term__cursor--static { animation: none; }
+/* the caret over a suggestion's first letter: the letter stays suggestion-dim when the cell blinks off */
+.term__cursor--ghost { color: var(--t-bg); }
+@keyframes term-blink-ghost {
+  0%, 50% { background: var(--t-accent); color: var(--t-bg); }
+  50.01%, 100% { background: transparent; color: var(--t-faint); }
+}
+.term__cursor--ghost:not(.term__cursor--static) { animation-name: term-blink-ghost; }
 .term__ghost {
+  /* --t-faint itself holds AA on the window (no extra fade on top) */
   color: var(--t-faint);
-  opacity: 0.7;
   white-space: pre;
 }
 /* inline avatar image (whoami) — floated so profile text flows beside it,
    like neofetch. Pixel art stays crisp. */
 /* a line that starts below the floated avatar, one blank line clear of it */
-.term__line--clear { clear: both; padding-top: 1.4em; }
+.term__line--clear { clear: both; padding-top: 0.5em; }
 .term__avatar {
   float: left;
   width: clamp(6rem, 16vw, 9rem);
@@ -1594,6 +1926,10 @@ html.reduce-motion *::after {
   cursor: pointer;
 }
 .term__tl-row:focus-visible { outline: 1px solid var(--t-accent); outline-offset: -1px; }
+/* a finger needs the 44px DESIGN.md asks for */
+@media (pointer: coarse) {
+  .term__tl-row { min-height: 2.75rem; align-items: center; }
+}
 .term__tl-year { color: var(--t-faint); }
 .term__tl-node { color: var(--t-faint); white-space: pre; }
 .term__tl-title { color: var(--t-ink); }
@@ -1604,10 +1940,80 @@ html.reduce-motion *::after {
 .term__tl-preview {
   margin-top: 0.6rem;
 }
-@keyframes term-blink {
-  0%, 50% { opacity: 1; }
-  50.01%, 100% { opacity: 0; }
+/* rules are borders, not ── runs: a run of box chars wraps on a phone */
+.term__tl-rule { max-width: 42ch; margin: 0.45rem 0; border-top: 1px solid var(--t-border); }
+.term__tl-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-top: 0.35rem; }
+.term__tl-keys { color: var(--t-dim); }
+.term__tl-action {
+  position: relative;
+  min-height: 2rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--t-border);
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--t-accent);
+  font: inherit;
+  cursor: pointer;
 }
+.term__tl-list:focus { outline: none; } /* the selected row (accent, ▶) is the indicator */
+.term__tl-action::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2.75rem; transform: translateY(-50%); }
+.term__tl-action:hover { border-color: var(--t-accent); }
+.term__tl-action:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+/* touch: the arrows legend means nothing without a keyboard; tap a row to select */
+@media (pointer: coarse) { .term__tl-keys { display: none; } }
+@keyframes term-blink {
+  0%, 50% { background: var(--t-accent); color: var(--t-bg); }
+  50.01%, 100% { background: transparent; color: inherit; }
+}
+
+/* ---- touch key row: Tab, arrows, pipe, ^R, ^C (a phone keyboard has none) ---- */
+.term__keys { display: none; }
+@media (pointer: coarse) {
+  .term__keys {
+    display: flex;
+    flex-shrink: 0;
+    gap: 0.25rem;
+    padding: 0.45rem 0.75rem 0;
+    border-top: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
+    background: color-mix(in oklab, var(--surface) 40%, var(--background));
+  }
+  .term__keys + .term__chips { border-top: 0; }
+}
+.term__key {
+  position: relative;
+  flex: 1;
+  min-height: 2.25rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in oklab, var(--foreground) 16%, transparent);
+  background: color-mix(in oklab, var(--foreground) 5%, transparent);
+  color: var(--foreground);
+  font-size: var(--text-xs);
+}
+/* the tap area reaches across each gap (the later key takes the overlap): no dead zone, 44px+ wide on a 390px phone */
+/* the key row's and escape chip's arrows (← →) drawn as before, full size: Geist Mono lacks them,
+   and the output's one-column monospace arrow (for aligned bullets) would look small here */
+.term__key, .term__chip--escape { font-family: "Geist Mono", Arial, sans-serif; }
+/* narrower than 390px, eight 44px keys don't fit: the row scrolls sideways, like the chips */
+@media (pointer: coarse) and (max-width: 389px) {
+  .term__keys { overflow-x: auto; scrollbar-width: none; scroll-padding-inline: 0.75rem; }
+  .term__keys::-webkit-scrollbar { display: none; }
+  .term__keys .term__key { flex: 0 0 2.75rem; }
+}
+.term__key::after { content: ""; position: absolute; inset: -0.25rem -0.3rem; }
+/* DESIGN.md's 44px touch rule, as drawn, not only as a hit area */
+@media (pointer: coarse) {
+  /* eight keys share a phone's width: drawn ~39px wide, tapped 44+ (their ::after spans the gaps) */
+  .term__key { min-height: 2.75rem; }
+  .term__chips .term__chip { min-height: 2.75rem; }
+}
+.term__key:active { background: color-mix(in oklab, var(--accent) 16%, transparent); border-color: color-mix(in oklab, var(--accent) 45%, transparent); }
+.term__key:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+/* the site's cursor ring would sit over two lines of output: over the shell, just the dot */
+html.custom-cursor-active body:has(.term:hover) .custom-cursor__ring { opacity: 0; }
+/* ...so the dot stays, even over the input and the chips (it hides over links elsewhere because
+   the ring grows there; here the ring is gone, and hiding both left no cursor at all) */
+html.custom-cursor-active body:has(.term:hover) .custom-cursor__dot.is-hidden { opacity: 1; }
 
 /* ---- quick-command chips: a click/tap-to-run way into the shell, so a
    first-time visitor never faces a bare prompt with nothing to recognise ---- */
@@ -1627,8 +2033,12 @@ html.reduce-motion *::after {
    "more this way", not as clipped text */
 @media (max-width: 640px) {
   .term__chips {
-    -webkit-mask-image: linear-gradient(to right, black calc(100% - 4rem), transparent);
-    mask-image: linear-gradient(to right, black calc(100% - 4rem), transparent);
+    /* a short fade says "more this way"; a focused chip scrolls clear of it */
+    -webkit-mask-image: linear-gradient(to right, black calc(100% - 2rem), transparent);
+    mask-image: linear-gradient(to right, black calc(100% - 2rem), transparent);
+    scroll-padding-inline: 0 2.5rem;
+    /* the row's end clears the fade, so the last chip (and its focus ring) is never washed out */
+    padding-right: 2.25rem;
   }
 }
 .term__chip {
@@ -1644,8 +2054,10 @@ html.reduce-motion *::after {
   transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
 }
 .term__chip { position: relative; }
+
 .term__chip::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2.75rem; transform: translateY(-50%); } /* 44px tap area, 32px look */
-.term__chip::before { content: "/"; color: color-mix(in oklab, var(--accent) 70%, var(--muted)); margin-right: 0.25rem; }
+/* the $ is decoration: empty alt text keeps it out of the chip's name ("help", not "dollar help") */
+.term__chip::before { content: "$" / ""; color: color-mix(in oklab, var(--accent) 70%, var(--muted)); margin-right: 0.25rem; }
 .term__chip:active {
   color: var(--foreground);
   border-color: color-mix(in oklab, var(--accent) 45%, transparent);
@@ -1666,6 +2078,14 @@ html.reduce-motion *::after {
   border-color: transparent;
   background: transparent;
 }
+/* desktop, at the row's end: a hairline sets the way out apart from the commands */
+@media (min-width: 641px) {
+  .term__chip--escape {
+    border-radius: 0;
+    border-left-color: color-mix(in oklab, var(--foreground) 14%, transparent);
+    padding-left: 1rem;
+  }
+}
 .term__chip--escape::before { content: none; }
 /* keep the row's end clear of the corner cube launcher (shown everywhere but
    phones — same query that hides it there) */
@@ -1677,7 +2097,7 @@ html.reduce-motion *::after {
 @media (max-width: 640px) {
   .term-page { padding: 0.5rem; }
   .term { border-radius: var(--radius-sm); }
-  .term__scroll { font-size: var(--text-md); padding: 0.8rem 0.85rem 1rem; }
+  .term__scroll { font-size: 16px; padding: 0.8rem 0.85rem 1rem; } /* 16px: the line you type can't be smaller (iOS zoom), so nothing is */
   .term__title { font-size: var(--text-2xs); }
 }
 
@@ -1685,8 +2105,10 @@ html.reduce-motion *::after {
 @media (prefers-reduced-motion: reduce) {
   .term__cursor { animation: none; }
   .term__output--reveal { animation: none; }
+  .term__cmdline--bell { animation: none; }
 }
 html.reduce-motion .term__cursor { animation: none; }
+html.reduce-motion .term__cmdline--bell { animation: none; }
 html.reduce-motion .term__output--reveal { animation: none; }
 
 /* ============================================================
@@ -1726,6 +2148,51 @@ html.reduce-motion .term__output--reveal { animation: none; }
 }
 .xp__link:hover { text-decoration-color: var(--accent); }
 
+/* ---- contribution heatmap (Experience) ---------------------------------- */
+.heat { margin: calc(-1 * clamp(1.5rem, 4vw, 2.75rem)) 0 clamp(3rem, 7vw, 5rem); }
+.heat__head {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+  gap: 0.35rem 1rem; margin-bottom: 0.85rem;
+}
+.heat__title { font-size: var(--text-base); font-weight: 400; color: var(--muted); }
+.heat__title strong { color: var(--foreground); font-weight: 600; font-variant-numeric: tabular-nums; }
+.heat__link {
+  font-size: var(--text-xs); color: var(--muted);
+  text-decoration: underline; text-underline-offset: 3px;
+  text-decoration-color: color-mix(in oklab, var(--foreground) 25%, transparent);
+  transition: color 200ms var(--ease-out), text-decoration-color 200ms var(--ease-out);
+}
+.heat__link:hover { color: var(--foreground); text-decoration-color: var(--accent); }
+.heat__link:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 4px; }
+.heat__frame {
+  padding: clamp(0.75rem, 2vw, 1.1rem);
+  border-radius: var(--radius-xl, 16px);
+  border: 1px solid color-mix(in oklab, var(--foreground) 9%, transparent);
+  background: color-mix(in oklab, var(--surface) 60%, transparent);
+}
+/* the year's shape is held from first paint: no jump when it arrives */
+.heat__svg { display: block; width: 100%; height: auto; aspect-ratio: 739 / 111; }
+.heat__month { font: 9px var(--font-geist-mono), monospace; fill: var(--muted); }
+.heat--loading .heat__cell { animation: heat-wait 1.6s var(--ease-out) infinite alternate; }
+@keyframes heat-wait { from { opacity: 0.55; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .heat--loading .heat__cell { animation: none; } }
+.heat__cell--0 { fill: color-mix(in oklab, var(--foreground) 7%, transparent); background: color-mix(in oklab, var(--foreground) 7%, transparent); }
+.heat__cell--1 { fill: color-mix(in oklab, var(--accent) 32%, var(--background)); background: color-mix(in oklab, var(--accent) 32%, var(--background)); }
+.heat__cell--2 { fill: color-mix(in oklab, var(--accent) 55%, var(--background)); background: color-mix(in oklab, var(--accent) 55%, var(--background)); }
+.heat__cell--3 { fill: color-mix(in oklab, var(--accent) 78%, var(--background)); background: color-mix(in oklab, var(--accent) 78%, var(--background)); }
+.heat__cell--4 { fill: var(--accent); background: var(--accent); }
+.heat__legend {
+  display: flex; align-items: center; justify-content: flex-end; gap: 0.3rem;
+  margin-top: 0.55rem; font-size: var(--text-2xs); color: var(--muted);
+}
+.heat__swatch { width: 10px; height: 10px; border-radius: 2.5px; }
+.heat[aria-busy="true"] .heat__frame { opacity: 0.6; }
+.heat__frame:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+@media (max-width: 640px) {
+  .heat__frame { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
+  .heat__svg { width: 640px; max-width: none; }
+}
+
 /* ---- timeline shell ----------------------------------------------------- */
 .xp__timeline { position: relative; }
 
@@ -1736,6 +2203,7 @@ html.reduce-motion .term__output--reveal { animation: none; }
   margin: 0;
   padding: 0;
   position: relative;
+  --xp-step: 20px; /* the gap between the graph's lanes (the graph reads this) */
 }
 /* neutral track */
 .xp__spine {
@@ -1767,8 +2235,9 @@ html.reduce-motion .term__output--reveal { animation: none; }
 .xp__item {
   position: relative;
   display: grid;
-  grid-template-columns: 1.5rem 1fr;
-  gap: clamp(1rem, 2.5vw, 2.25rem);
+  /* the graph's width: one 20px lane per branch, plus the margins either side */
+  grid-template-columns: calc(var(--xp-lanes, 1) * var(--xp-step) + 12px) 1fr;
+  gap: clamp(0.75rem, 2vw, 1.75rem);
   padding-bottom: clamp(3rem, 7vw, 5rem);
 }
 .xp__item:last-child { padding-bottom: 0; }
@@ -1778,8 +2247,132 @@ html.reduce-motion .term__output--reveal { animation: none; }
   position: relative;
   padding-top: 0.4rem;
 }
+/* the graph's lines sit under the nodes and the text */
+.xp__graph {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.xp__lane {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.34;
+  stroke-dasharray: 1;
+  transition: opacity 0.35s ease, stroke-width 0.35s ease, filter 0.35s ease;
+  /* the graph draws itself in once, when the page arrives */
+  animation: xp-lane-draw 1100ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes xp-lane-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+/* main is the trunk everything forks from: always the strongest line */
+.xp__lane--main { opacity: 0.7; stroke-width: 2.4; }
+.xp__tip { opacity: 0.55; transition: opacity 0.35s ease; animation: xp-tip-in 500ms ease 900ms both; }
+.xp__tip.is-active { opacity: 1; }
+@keyframes xp-tip-in { from { opacity: 0; } }
+/* the branch being read: full strength, with a glow (the page's one lit thing) */
+.xp__lane.is-active {
+  opacity: 1;
+  stroke-width: 2.6;
+  filter: drop-shadow(0 0 5px currentColor);
+}
+/* lane colours: bright on the night canvas, deeper on paper so lines and nodes hold 3:1 */
+.xp {
+  --lane-0: var(--accent);
+  --lane-1: oklch(0.78 0.12 220);
+  --lane-2: oklch(0.74 0.14 300);
+  --lane-3: oklch(0.8 0.1 190);
+  --lane-4: oklch(0.72 0.15 260);
+  --lane-5: oklch(0.76 0.12 330);
+}
+:root[data-theme="light"] .xp {
+  --lane-0: oklch(0.5 0.2 293);
+  --lane-1: oklch(0.54 0.14 235);
+  --lane-2: oklch(0.5 0.19 305);
+  --lane-3: oklch(0.54 0.11 190);
+  --lane-4: oklch(0.5 0.18 265);
+  --lane-5: oklch(0.52 0.18 335);
+}
+/* by day the lit branch is a firmer line with a soft shadow under it, not a glow */
+:root[data-theme="light"] .xp__lane { opacity: 0.5; }
+:root[data-theme="light"] .xp__lane--main { opacity: 0.8; }
+:root[data-theme="light"] .xp__lane.is-active {
+  opacity: 1;
+  stroke-width: 3;
+  filter: drop-shadow(0 2px 3px color-mix(in oklab, currentColor 32%, transparent));
+}
+:root[data-theme="light"] .xp__tip { opacity: 0.7; }
+/* paper needs a firmer small mono line and a full-strength node outline to hold AA */
+:root[data-theme="light"] .xp__branch { color: color-mix(in oklab, var(--foreground) 70%, transparent); }
+:root[data-theme="light"] .xp__item.is-past .xp__node { border-color: var(--lane-color, var(--accent)); }
+.xp__headref {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 1.1rem;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.xp__headref-tag {
+  color: var(--foreground);
+  border: 1px solid color-mix(in oklab, var(--accent) 60%, transparent);
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  padding: 0.05rem 0.45rem;
+  border-radius: var(--radius-xs);
+  letter-spacing: 0.04em;
+}
+.xp__branch { color: color-mix(in oklab, var(--foreground) 52%, transparent); transition: color 0.3s ease; }
+/* the role being read picks up its branch's colour in the small mono lines */
+.xp__item.is-active .xp__branch { color: var(--lane-color); }
+.xp__item.is-active .xp__dates { color: color-mix(in oklab, var(--lane-color) 55%, var(--foreground)); }
+.xp__dates { transition: color 0.3s ease; }
+/* an entry with only a line of text doesn't need the full gap that the big ones get */
+.xp__item--folded { padding-bottom: clamp(1.25rem, 3vw, 1.9rem); }
+.xp__fold, .xp__foldall {
+  font-family: var(--font-mono), monospace;
+  font-size: var(--text-2xs);
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  padding: 0.5rem 0;
+  min-height: 2.75rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--foreground) 24%, transparent);
+  text-underline-offset: 0.25em;
+}
+.xp__fold:hover, .xp__foldall:hover { color: var(--foreground); text-decoration-color: var(--accent); }
+.xp__fold:focus-visible, .xp__foldall:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.xp__foldall { margin-left: auto; }
+.xp__item--short { padding-bottom: clamp(1.75rem, 4vw, 2.75rem); }
+/* a quiet year marker where the roles below it began in a different year: a hairline and a mono label */
+.xp__year {
+  grid-column: 2; /* in the text column, so the graph's lines run through uninterrupted */
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 0 1.5rem;
+  font-size: var(--text-2xs);
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.xp__year::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, color-mix(in oklab, var(--foreground) 16%, transparent), transparent);
+}
 .xp__node {
-  position: relative;
+  position: absolute;
+  z-index: 1;
+  left: calc(6px + var(--lane, 0) * var(--xp-step) - 0.4rem);
+  top: 0.4rem;
   display: block;
   width: 0.8rem;
   height: 0.8rem;
@@ -1828,26 +2421,26 @@ html.reduce-motion .term__output--reveal { animation: none; }
 }
 /* past nodes: filled so the traveled path reads as done */
 .xp__item.is-past .xp__node {
-  border-color: color-mix(in oklab, var(--accent) 60%, transparent);
-  background: color-mix(in oklab, var(--accent) 40%, var(--background));
+  border-color: color-mix(in oklab, var(--lane-color, var(--accent)) 70%, transparent);
+  background: color-mix(in oklab, var(--lane-color, var(--accent)) 45%, var(--background));
 }
 /* active node: clearly larger, accent-filled, ring glow + a single pulse */
 .xp__item.is-active .xp__node {
   transform: scale(1.45);
-  border-color: var(--accent);
-  background: var(--accent);
-  box-shadow: 0 0 0 5px color-mix(in oklab, var(--accent) 20%, transparent);
+  border-color: var(--lane-color, var(--accent));
+  background: var(--lane-color, var(--accent));
+  box-shadow: 0 0 0 5px color-mix(in oklab, var(--lane-color, var(--accent)) 22%, transparent), 0 0 14px color-mix(in oklab, var(--lane-color, var(--accent)) 55%, transparent);
 }
 .xp:not(.xp--static) .xp__item.is-active .xp__node::after {
   animation: xp-node-pulse 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 /* current role: accent fill even when not active */
 .xp__node.is-current {
-  background: color-mix(in oklab, var(--accent) 50%, var(--background));
-  border-color: var(--accent);
+  background: color-mix(in oklab, var(--lane-color, var(--accent)) 55%, var(--background));
+  border-color: var(--lane-color, var(--accent));
 }
 .xp__item.is-active .xp__node.is-current {
-  background: var(--accent);
+  background: var(--lane-color, var(--accent));
 }
 
 /* ---- entry -------------------------------------------------------------- */
@@ -2033,9 +2626,9 @@ html.reduce-motion .term__output--reveal { animation: none; }
 
 /* ---- responsive --------------------------------------------------------- */
 @media (max-width: 640px) {
-  .xp__item { grid-template-columns: 1rem 1fr; gap: 1rem; }
-  .xp__spine { left: 0.27rem; }
-  .xp__node { width: 0.56rem; height: 0.56rem; }
+  .xp__list { --xp-step: 12px; }
+  .xp__item { gap: 0.75rem; }
+  .xp__node { width: 0.56rem; height: 0.56rem; left: calc(6px + var(--lane, 0) * var(--xp-step) - 0.28rem); }
   .xp__item.is-active .xp__node { transform: scale(1.2); box-shadow: none; }
 }
 
@@ -2048,7 +2641,9 @@ html.reduce-motion .term__output--reveal { animation: none; }
 .reduce-motion .xp__role,
 .reduce-motion .xp__entry { transition: none; }
 .reduce-motion .xp__node::after { animation: none; }
+.reduce-motion .xp__lane, .reduce-motion .xp__tip { animation: none; }
 @media (prefers-reduced-motion: reduce) {
+  .xp__lane, .xp__tip { animation: none; }
   .xp__intro,
   .xp__spine,
   .xp__node,
@@ -2322,7 +2917,7 @@ html.reduce-motion .term__output--reveal { animation: none; }
 .cmdk__backdrop {
   position: absolute;
   inset: 0;
-  background: color-mix(in oklab, var(--museum-deep) 68%, transparent);
+  background: var(--scrim);
   backdrop-filter: blur(8px);
   animation: about-reveal 180ms var(--ease-out) both;
 }
@@ -2331,7 +2926,7 @@ html.reduce-motion .term__output--reveal { animation: none; }
   width: min(38rem, 100%);
   border-radius: var(--radius-xl);
   overflow: hidden;
-  background: color-mix(in oklab, var(--background) 94%, var(--museum-deep));
+  background: var(--panel);
   box-shadow:
     inset 0 0 0 1px color-mix(in oklab, var(--foreground) 12%, transparent),
     0 30px 90px color-mix(in oklab, var(--shade) 55%, transparent),
@@ -2467,52 +3062,6 @@ li:first-child .cmdk__section {
   }
 }
 
-/* Rubik turn-button pad — the easy way to solve: tap a face (or Shift/prime). */
-.rubik-modal__pad {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.4rem;
-  margin: 0 auto;
-  width: 100%;
-}
-.rubik-modal__pad-face {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-.rubik-modal__face-btn {
-  /* Sized to match the bottom-right corner cube trigger (3.5rem square). */
-  width: 3.5rem;
-  height: 3.5rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-xl);
-  border: 1px solid color-mix(in oklab, var(--foreground) 16%, transparent);
-  background: color-mix(in oklab, var(--surface) 55%, transparent);
-  color: var(--foreground);
-  font-family: var(--font-geist-mono, ui-monospace, monospace);
-  font-size: var(--text-md);
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out),
-    transform 120ms var(--ease-out);
-}
-.rubik-modal__face-btn:hover {
-  border-color: color-mix(in oklab, var(--accent) 55%, transparent);
-  background: color-mix(in oklab, var(--accent) 14%, transparent);
-}
-.rubik-modal__face-btn:active {
-  transform: translateY(1px);
-  background: color-mix(in oklab, var(--accent) 24%, transparent);
-}
-.rubik-modal__face-btn--prime {
-  font-size: var(--text-xs);
-  color: var(--muted);
-  background: color-mix(in oklab, var(--surface) 35%, transparent);
-}
-
 /* Small status toast for palette actions (whoami, copy link). */
 .cube-nav-toast {
   position: absolute;
@@ -2522,7 +3071,7 @@ li:first-child .cmdk__section {
   padding: 0.45rem 0.75rem;
   border-radius: var(--radius-md);
   font-size: var(--text-2xs);
-  color: var(--ink-on-light);
+  color: var(--accent-fg);
   background: var(--accent);
   box-shadow: 0 0 24px color-mix(in oklab, var(--accent) 40%, transparent);
   animation: about-reveal 220ms var(--ease-out) both;
@@ -2578,6 +3127,13 @@ html.focus-mode .site-footer {
   --label-dim: color-mix(in oklab, var(--museum-ink) 64%, transparent); /* ≈5.1:1 on var(--ink-on-light) */
   --label: color-mix(in oklab, var(--museum-ink) 82%, transparent);
 }
+/* By day the museum's own text and chrome go dark-on-paper. Scoped here, not on
+   :root, because the Rubik modal, Skills medal and Contact share the night values. */
+:root[data-theme="light"] .museum {
+  --museum-ink: #1a1240;
+  --museum-night: #f4f2fb;
+  --museum-deep: #e6e2f6;
+}
 
 /* ---------- Approach intro (real Three.js walk into the museum) ----------
    A tall scroller; the fixed R3F canvas inside reads scroll progress and dollies
@@ -2590,6 +3146,14 @@ html.focus-mode .site-footer {
   background: transparent; /* site particle field reads through as stars */
 }
 .museum-scene__canvas canvas { display: block; }
+/* the day sky: pale lilac high up, paper at the horizon; invisible at night (opacity set by the time of day) */
+.museum-sky {
+  position: fixed;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(to bottom, #c4bcf0 0%, #d9d3f6 30%, #eae6fa 58%, #f6f4fc 78%, #f7f6fb 100%);
+}
 /* Auto-played walk — page must not scroll. */
 html:has(.museum--intro),
 body:has(.museum--intro) {
@@ -2598,19 +3162,23 @@ body:has(.museum--intro) {
 }
 
 /* fixed HUD over the intro */
+.museum-intro__dip,
+.museum-intro__glow,
 .museum-intro__flood {
   position: fixed;
   inset: 0;
-  z-index: 5;
   pointer-events: none;
-  background: radial-gradient(
-    circle at 50% 44%,
-    var(--flood-warm) 0%,
-    var(--flood-cream) 42%,
-    color-mix(in oklab, var(--flood-cream) 85%, transparent) 100%
-  );
   will-change: opacity;
 }
+/* 1 · the street settles into deep colour (indigo at night, lilac by day) */
+.museum-intro__dip { z-index: 4; background: var(--flood-dip); }
+/* 2 · the light behind the doors blooms from the centre (amber / lilac-sky) */
+.museum-intro__glow {
+  z-index: 5;
+  background: radial-gradient(ellipse 70% 80% at 50% 46%, var(--flood-glow) 0%, color-mix(in oklab, var(--flood-glow) 55%, var(--flood-dip)) 55%, var(--flood-dip) 100%);
+}
+/* 3 · it fills the frame; the same fill is the hall's veil, so the handoff has no seam */
+.museum-intro__flood { z-index: 6; background: var(--flood-fill); }
 
 .museum-intro__hud {
   position: fixed;
@@ -2690,7 +3258,6 @@ body:has(.museum--intro) {
 .gallery {
   position: relative;
   z-index: 3;
-  animation: museum-fade-in 1200ms var(--ease-out) 150ms both;
 }
 /* The intro walk ends on a warm white flood as we cross the threshold. The
    gallery mounts under a matching warm veil that dissolves, so the handoff reads
@@ -2701,14 +3268,14 @@ body:has(.museum--intro) {
   inset: 0;
   z-index: 40;
   pointer-events: none;
-  background: radial-gradient(circle at 50% 44%, var(--flood-warm) 0%, var(--flood-cream) 55%, var(--flood-cream) 100%);
+  background: var(--flood-fill);
   /* hold on the light a beat, then dissolve slowly so stepping out of the flood
      into the hall feels gradual, not a cut. */
-  animation: gallery-veil-out 1750ms cubic-bezier(0.33, 0, 0.2, 1) both;
+  animation: gallery-veil-out 1500ms cubic-bezier(0.22, 0.9, 0.3, 1) both;
 }
 @keyframes gallery-veil-out {
   0% { opacity: 1; }
-  22% { opacity: 1; }
+  14% { opacity: 1; }
   100% { opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -2841,6 +3408,8 @@ html.kbd-used .gallery-hint__keys { display: flex; }
   /* firm enough that a case's wireframe edge never runs through the copy */
   background: radial-gradient(closest-side, color-mix(in oklab, var(--background) 90%, transparent) 55%, transparent);
 }
+/* By day there's no pool of light behind the plaque: the text is ink on paper and needs none. */
+:root[data-theme="light"] .gallery-plaque::before { display: none; }
 .gallery-plaque {
   position: fixed;
   left: clamp(1.4rem, 5vw, 4rem);
@@ -2932,6 +3501,14 @@ html.kbd-used .gallery-hint__keys { display: flex; }
    centred. Margin-auto centring (not translate) so the enter animation's
    transform can't knock it off-centre. Sits above the phone dock. */
 .gallery { --rail-bottom: clamp(1.1rem, 3.2vh, 1.75rem); }
+/* live visit count under the plaque's meta line: a quiet mono fact, not a badge */
+.gallery-plaque__visits {
+  /* tucks under the meta line, borrowing its bottom gap */
+  margin: -0.55rem 0 0.85rem;
+  font-family: var(--font-mono), monospace; font-size: var(--text-2xs);
+  color: var(--label-dim); font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
 .gallery-rail {
   position: fixed;
   z-index: 6;
@@ -3113,6 +3690,76 @@ html.kbd-used .gallery-hint__keys { display: flex; }
   .museum-index[open] { animation: none; }
 }
 
+/* Visitor book: the floor plan's sheet, with a sign line on top and the names
+   below. Names are the content, so they read like a ledger: name left, date
+   right, newest first. */
+.vbook { width: min(32rem, calc(100vw - 2rem)); }
+.vbook__form {
+  padding: 1rem 1.25rem 0.9rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+.vbook__label { display: block; margin-bottom: 0.4rem; font-size: var(--text-sm); color: var(--muted); }
+.vbook__row { display: flex; gap: 0.5rem; }
+.vbook__input {
+  flex: 1; min-width: 0; min-height: 2.75rem; padding: 0 0.9rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in oklab, var(--foreground) 16%, transparent);
+  background: color-mix(in oklab, var(--background) 80%, transparent);
+  color: var(--foreground); font-size: var(--text-base);
+  transition: border-color 200ms var(--ease-out);
+}
+.vbook__input:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; border-color: transparent; }
+.vbook__input[aria-invalid="true"] { border-color: color-mix(in oklab, var(--status-error) 65%, transparent); }
+.vbook__sign {
+  flex-shrink: 0; min-height: 2.75rem; padding: 0 1.15rem;
+  border-radius: 9999px;
+  background: var(--foreground); color: var(--background);
+  font-size: var(--text-sm); font-weight: 500;
+  transition: opacity 200ms var(--ease-out);
+}
+.vbook__sign:disabled { opacity: 0.6; cursor: progress; }
+.vbook__sign:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.vbook__hint, .vbook__error { margin-top: 0.45rem; font-size: var(--text-xs); color: var(--muted); }
+.vbook__error { color: var(--status-error-soft); }
+.vbook__hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.vbook__signed {
+  display: flex; align-items: flex-start; gap: 0.55rem;
+  padding: 0.95rem 1.25rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
+  font-size: var(--text-sm); color: var(--muted);
+}
+.vbook__signed svg { flex-shrink: 0; margin-top: 0.2rem; color: var(--status-live); }
+.vbook__signed strong { color: var(--foreground); font-weight: 500; }
+.vbook__list { min-height: 6rem; }
+.vbook__state { padding: 1rem 0.75rem; font-size: var(--text-sm); color: var(--muted); }
+.vbook__retry {
+  color: var(--foreground); text-decoration: underline; text-underline-offset: 0.2em;
+  min-height: 1.5rem;
+}
+.vbook__retry:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 4px; }
+.vbook__names { list-style: none; margin: 0; padding: 0; }
+.vbook__name {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-lg);
+}
+.vbook__name + .vbook__name { border-top: 1px solid color-mix(in oklab, var(--foreground) 6%, transparent); }
+.vbook__who { min-width: 0; overflow-wrap: anywhere; font-size: var(--text-md); color: var(--foreground); }
+.vbook__when {
+  flex-shrink: 0; font-family: var(--font-mono), monospace; font-size: var(--text-2xs);
+  color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.vbook__name[aria-current="true"] { background: color-mix(in oklab, var(--accent) 12%, transparent); }
+.vbook__name[aria-current="true"] + .vbook__name { border-top-color: transparent; }
+/* phones: the rail's book is icon-only, but its label stays the button's name */
+@media (max-width: 640px) {
+  .gallery-rail__book { padding-inline: 0; width: 2.75rem; justify-content: center; }
+  .gallery-rail__book-label {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap;
+  }
+}
+
 /* Narrow viewports: the fixed overlay + the bottom dock share little space, so
    reflow — separate the top signage from the scroll hint, and lift the plaque
    and nav clear of the dock. */
@@ -3239,7 +3886,23 @@ html.kbd-used .gallery-hint__keys { display: flex; }
   --proom-ink: color-mix(in oklab, var(--museum-ink) 94%, transparent);
   --proom-mute: rgba(226, 232, 246, 0.62);
   --proom-line: rgba(201, 210, 230, 0.16);
+  --proom-accent: var(--proom-accent-raw);
 }
+.proom-lb { --proom-accent: var(--proom-accent-raw); }
+
+/* ---- The room by day: ink on lilac paper ----
+   The pastel project accents were picked for a dark room; on paper they'd be too
+   pale for a border or a word, so by day they're deepened toward the ink. */
+:root[data-theme="light"] .proom,
+:root[data-theme="light"] .proom-lb {
+  --proom-accent: color-mix(in oklab, var(--proom-accent-raw) 52%, #1a1240);
+}
+:root[data-theme="light"] .proom {
+  --proom-mute: color-mix(in oklab, var(--museum-ink) 68%, transparent);
+  --proom-line: color-mix(in oklab, var(--museum-ink) 22%, transparent);
+}
+/* the one primary button is ink-filled: its label has to be the paper, not the ink */
+:root[data-theme="light"] .proom__action { color: #f7f6fb; }
 /* ambient project backdrop, pushed far back and low */
 .proom__art { position: absolute; inset: 0; z-index: 0; opacity: 0.5; pointer-events: none; }
 .proom__art .pworld-art { opacity: 0.28; }
@@ -3303,6 +3966,22 @@ html.kbd-used .gallery-hint__keys { display: flex; }
   width: 160%; height: 1.4rem; transform: translateX(-50%);
   background: radial-gradient(closest-side, color-mix(in oklab, var(--proom-accent) 16%, transparent), transparent);
 }
+/* By day the monitor is still a dark object: the screen's letterbox and the stand
+   stay ink, so the picture sits in a real screen instead of floating in a pale box,
+   and the shadow is a soft violet one that falls below it. */
+:root[data-theme="light"] .proom__video-el {
+  background: #0f0b26;
+  border-color: color-mix(in oklab, var(--proom-accent) 60%, #0f0b26);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset, 0 28px 50px -28px rgba(42, 31, 107, 0.45), 0 6px 14px -8px rgba(42, 31, 107, 0.3);
+}
+:root[data-theme="light"] .proom__video-neck {
+  background: linear-gradient(to right, #1a1240, #2d2362 45%, #1a1240);
+}
+:root[data-theme="light"] .proom__video-base {
+  background: linear-gradient(to bottom, #2d2362, #1a1240);
+  box-shadow: 0 10px 18px -10px rgba(42, 31, 107, 0.5);
+}
+:root[data-theme="light"] .proom__video-base::after { display: none; }
 .proom__video-cap-short { display: none; }
 @media (max-width: 640px) {
   .proom__video-cap-long { display: none; }
@@ -3393,6 +4072,13 @@ html.kbd-used .gallery-hint__keys { display: flex; }
   font-size: var(--text-xs); cursor: pointer; backdrop-filter: blur(6px);
   transition: border-color 200ms var(--ease-out), color 200ms var(--ease-out), background 200ms var(--ease-out);
 }
+.proom__repo-link {
+  color: var(--proom-ink); text-decoration: underline; text-underline-offset: 0.2em;
+  text-decoration-color: var(--proom-line);
+  transition: text-decoration-color 200ms var(--ease-out);
+}
+.proom__repo-link:hover { text-decoration-color: var(--proom-accent); }
+.proom__repo-link:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 4px; }
 /* secondary exit: text, not a second pill competing with the museum */
 .proom__exit--quiet {
   border-color: transparent; background: transparent; backdrop-filter: none;
@@ -3988,7 +4674,7 @@ html.kbd-used .gallery-hint__keys { display: flex; }
    field reads through the transparent stage. */
 html:has(.museum),
 body:has(.museum) {
-  background: var(--shade);
+  background: var(--museum-sky);
   scrollbar-width: none; /* Firefox */
 }
 html:has(.museum)::-webkit-scrollbar {
@@ -4871,6 +5557,48 @@ html.kbd-used .sk__keys { display: inline-flex; margin-left: auto; }
   color: color-mix(in oklab, var(--foreground) 82%, transparent);
   max-width: 64ch;
 }
+.rez__bullets { padding-left: 0; }
+.rez__bullets li { position: relative; padding-left: 1.3rem; }
+.rez__bullets li::before {
+  content: "—";
+  position: absolute;
+  left: 0;
+  color: color-mix(in oklab, var(--foreground) 30%, transparent);
+}
+/* a role with no bullets yet shows its one line */
+.rez__note { margin-top: 0.55rem; font-size: var(--text-sm); line-height: 1.55; color: color-mix(in oklab, var(--foreground) 76%, transparent); max-width: 64ch; }
+.rez__contact {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.55rem;
+  margin: 0.55rem 0 0; font-size: var(--text-xs); letter-spacing: 0.02em; color: var(--muted);
+}
+.rez__contact a { color: var(--foreground); text-decoration: underline; text-decoration-color: color-mix(in oklab, var(--foreground) 24%, transparent); text-underline-offset: 0.25em; }
+.rez__contact a:hover { text-decoration-color: var(--accent); }
+.rez__contact a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+/* the Download pill that follows you once the top buttons have scrolled away (desktop only) */
+.rez__dock {
+  position: fixed; left: clamp(1rem, 3vw, 2.25rem); bottom: 1.5rem; z-index: 20;
+  display: none; align-items: center; gap: 0.45rem; min-height: 2.75rem; padding: 0.55rem 1.1rem;
+  border-radius: 9999px; font-size: var(--text-sm); font-weight: 500; text-decoration: none;
+  background: var(--foreground); color: var(--background);
+  opacity: 0; transform: translateY(8px); pointer-events: none;
+  transition: opacity 0.25s var(--ease-out), transform 0.25s var(--ease-out);
+}
+.rez__dock.is-on { opacity: 1; transform: none; pointer-events: auto; }
+.rez__dock:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (min-width: 768px) { .rez__dock { display: inline-flex; } }
+@media (prefers-reduced-motion: reduce) { .rez__dock { transition: none; } }
+/* printed: ink on white, just the document */
+@media print {
+  .rez { background: #fff !important; color: #111 !important; }
+  .rez * { color: #111 !important; background: transparent !important; border-color: #ccc !important; box-shadow: none !important; text-shadow: none !important; animation: none !important; }
+  .rez__actions, .rez__dock, .rez__foot nav, .rez__intro .rez__lead { display: none !important; }
+  .rez__sheet { border: 0 !important; padding: 0 !important; }
+  .rez a { text-decoration: none !important; }
+}
+/* the site's chrome stays off paper: the nav pill and the cube launcher */
+@media print {
+  nav[aria-label="Primary"], .nav-island, [class^="cube-nav"], [class*=" cube-nav"] { display: none !important; }
+}
 .rez__bullets li::marker { color: var(--muted); }
 .rez__tech { margin-top: 0.5rem; font-size: var(--text-2xs); color: var(--muted); line-height: 1.6; }
 .rez__skills { display: flex; flex-direction: column; gap: 0.55rem; margin: 0; }
@@ -5253,7 +5981,6 @@ html.kbd-used .sk__keys { display: inline-flex; margin-left: auto; }
 /* ---- entrance ---- */
 @keyframes ct-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .ct:not(.ct--static) .ct__intro { animation: ct-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
-.ct:not(.ct--static) .ct__panel { animation: ct-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both; }
 .ct:not(.ct--static) .ct__elsewhere { animation: ct-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.24s both; }
 
 /* ---- responsive ---- */
@@ -5273,203 +6000,204 @@ html.kbd-used .sk__keys { display: inline-flex; margin-left: auto; }
 }
 
 /* ============================================================
-   Home "selected work" cards — small signs of life on hover
+   Home "Selected work · live": one project at a time, told by its
+   museum case, how it's built and a preview shell; then the year
+   in commits. --pa is the featured project's own accent.
    ============================================================ */
-/* ---- Home: selected work + currently ----
-   One project leads at display size; the rest are a typographic list on
-   hairlines. No boxes, no identical cards. */
-.hh-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1.5rem;
-  padding-bottom: 0.85rem;
-  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
+.lw { --pa-raw: var(--accent); --pa: var(--pa-raw); padding-bottom: var(--space-section-compact); }
+/* the exhibit accents are pastel, tuned to glow on night; on paper each is
+   inked down to the same hue at a readable depth */
+:root[data-theme="light"] .lw { --pa: color-mix(in oklch, var(--pa-raw) 50%, #1a1240); }
+.lw-head {
+  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem 1.5rem;
+  padding-bottom: 0.9rem; border-bottom: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
 }
-.hh-head-title { font-size: var(--text-base); font-weight: 500; color: var(--foreground); }
-.hh-all {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-height: 1.5rem;
-  font-size: var(--text-sm);
-  color: var(--muted);
-  transition: color 0.2s ease;
+.lw-head__title { font-size: var(--text-base); font-weight: 500; color: var(--foreground); }
+.lw-head__sub { margin-top: 0.2rem; font-size: var(--text-sm); color: var(--muted); }
+.lw-ctl { display: flex; align-items: center; gap: 0.75rem; }
+.lw-seg { display: flex; gap: 0.35rem; }
+.lw-seg__btn {
+  display: flex; flex-direction: column; gap: 0.35rem; width: 4.6rem; min-height: 2.75rem; justify-content: flex-end;
+  padding: 0 0 0.45rem; text-align: left; border-radius: var(--radius-xs); cursor: pointer;
 }
-.hh-all span { transition: transform 0.2s var(--ease-out); }
-/* Text links keep their size but get a 44px-tall tap area (DESIGN.md: touch
-   44×44 minimum) — an invisible ::after, like the Experience timeline dots. */
-.hh-all,
-.rez__entry-link,
-.rez__link { position: relative; }
-.hh-all::after,
-.rez__entry-link::after,
-.rez__link::after { content: ""; position: absolute; inset: -10px -6px; }
+.lw-seg__label { font-size: var(--text-xs); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 200ms var(--ease-out); }
+.lw-seg__btn.is-on .lw-seg__label, .lw-seg__btn:hover .lw-seg__label { color: var(--foreground); }
+.lw-seg__track { display: block; height: 3px; border-radius: 3px; overflow: hidden; background: color-mix(in oklab, var(--foreground) 12%, transparent); }
+.lw-seg__btn.is-done .lw-seg__track { background: color-mix(in oklab, var(--foreground) 30%, transparent); }
+.lw-seg__fill { display: block; height: 100%; background: var(--pa); transform-origin: left; animation: lw-fill linear forwards; }
+.lw-seg__fill.is-static { animation: none; }
+@keyframes lw-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.lw-seg__btn:focus-visible, .lw-pause:focus-visible, .lw-all:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.lw-pause {
+  display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: 9999px;
+  border: 1px solid color-mix(in oklab, var(--foreground) 22%, transparent);
+  font-size: 0.7rem; color: var(--foreground); transition: background-color 200ms var(--ease-out);
+}
+.lw-pause:hover { background: color-mix(in oklab, var(--foreground) 8%, transparent); }
+.lw-all { display: inline-flex; align-items: center; min-height: 2.75rem; font-size: var(--text-sm); color: var(--muted); white-space: nowrap; border-radius: var(--radius-xs); }
+.lw-all:hover { color: var(--foreground); }
 
-.hh-all:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; border-radius: var(--radius-xs); }
-
-.hh-work {
-  display: grid;
-  grid-template-columns: 1fr;
-}
+/* the stage: museum left at full height; built + shell stacked right */
+.lw-grid { display: grid; gap: 1rem; margin-top: 1.25rem; }
 @media (min-width: 900px) {
-  .hh-work {
-    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
-    column-gap: clamp(2rem, 5vw, 4rem);
-  }
-  /* .hh-work prefix: out-specifies the base `.hh-list { padding: 0 }` below */
-  .hh-work .hh-list { border-left: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent); padding-left: clamp(1.5rem, 3vw, 2.5rem); }
+  /* two voices: the stage, and the shell that talks about it */
+  .lw-grid { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); grid-template-rows: 29rem; }
 }
+.lw-card {
+  position: relative; display: flex; flex-direction: column; min-width: 0; overflow: hidden;
+  border-radius: var(--radius-xl, 16px);
+  border: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
+  background: color-mix(in oklab, var(--surface) 70%, transparent);
+}
+/* a sentence-case text link that points onward (the full room, the full shell) */
+.lw-textlink {
+  position: relative; display: inline-flex; align-items: center; font-size: var(--text-sm); color: var(--foreground);
+  text-decoration: underline; text-decoration-color: var(--pa); text-underline-offset: 3px; white-space: nowrap; border-radius: var(--radius-xs);
+}
+.lw-textlink::after { content: ""; position: absolute; inset: 50% -0.15rem auto; height: 2.75rem; transform: translateY(-50%); }
+.lw-textlink:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 
-/* the lead: the project a visitor should meet first */
-.hh-lead {
-  display: flex;
-  flex-direction: column;
-  padding: 1.5rem 0;
-  border-radius: var(--radius-md);
+/* museum case */
+.lw-hall { position: relative; flex: 1; min-height: 20rem; background: var(--stage); animation: lw-swap 260ms var(--ease-out); }
+.lw-hall__lines { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: color-mix(in oklab, var(--foreground) 14%, transparent); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.lw-plaque { position: relative; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1rem 1.1rem 0; }
+.lw-plaque__text { min-width: 0; }
+.lw-plaque__title { font-size: clamp(1.25rem, 2.2vw, 1.55rem); font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; color: var(--foreground); }
+.lw-plaque__meta { margin-top: 0.2rem; font-size: var(--text-xs); color: var(--muted); }
+.lw-plaque__desc { margin-top: 0.35rem; max-width: 52ch; font-size: var(--text-sm); color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.lw-plaque__go {
+  flex-shrink: 0; display: inline-flex; align-items: center; min-height: 2.5rem; padding: 0 1rem; border-radius: 9999px;
+  background: var(--foreground); color: var(--background); font-size: var(--text-sm); font-weight: 500; white-space: nowrap;
 }
-.hh-lead-title {
-  font-size: var(--text-feature-title);
-  font-weight: 600;
-  letter-spacing: -0.025em;
-  line-height: 1.1;
-  color: var(--foreground);
-  text-wrap: balance;
+.lw-plaque__go:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+.lw-case { position: absolute; left: 50%; bottom: 0.75rem; width: min(62%, 22rem); transform: translateX(-50%); }
+.lw-case__screen {
+  aspect-ratio: 16 / 10; overflow: hidden; border-radius: 6px; border: 6px solid #15131c; background: #000;
+  /* the screen lights the plinth below it: an offset spill, not a halo */
+  box-shadow: 0 22px 44px -20px color-mix(in oklab, var(--pa) 55%, transparent);
 }
-.hh-meta { margin-top: 0.5rem; font-size: var(--text-sm); color: var(--muted); }
-.hh-lead-desc {
-  margin-top: 1rem;
-  max-width: 52ch;
-  font-size: var(--text-base);
-  line-height: 1.6;
-  color: color-mix(in oklab, var(--foreground) 82%, transparent);
-  text-wrap: pretty;
+.lw-case__screen video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.lw-case__neck { width: 3.5rem; height: 1rem; margin: 0 auto; background: color-mix(in oklab, var(--foreground) 22%, transparent); clip-path: polygon(30% 0, 70% 0, 82% 100%, 18% 100%); }
+.lw-case__plinth {
+  display: grid; place-items: center; height: 2.1rem; margin: 0 -1.25rem;
+  border: 1px solid color-mix(in oklab, var(--foreground) 16%, transparent); border-top: 2px solid var(--pa);
+  background: color-mix(in oklab, var(--background) 80%, transparent);
 }
-.hh-tech { display: block; margin-top: 1rem; font-size: var(--text-xs); color: var(--muted); line-height: 1.6; }
-.hh-open {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-top: 1.25rem;
-  font-size: var(--text-sm);
-  color: var(--foreground);
+.lw-case__plinth span { font-size: var(--text-xs); font-weight: 600; color: var(--foreground); }
+.lw-museum__foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-shrink: 0; padding: 0.4rem 1rem;
+  border-top: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
+  font-size: var(--text-xs); color: var(--muted); white-space: nowrap; overflow: hidden;
 }
-.hh-open span { color: var(--accent); transition: transform 0.2s var(--ease-out); }
+.lw-museum__walk { flex-shrink: 0; display: inline-flex; align-items: center; min-height: 2.25rem; color: var(--muted); border-radius: var(--radius-xs); }
+.lw-museum__walk:hover { color: var(--foreground); }
+.lw-museum__repo-line { font-size: var(--text-2xs); }
+.lw-museum__foot > * { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.lw-museum__foot > span:last-child { flex-shrink: 0; }
+.lw-museum__repo { color: var(--foreground); text-decoration: underline; text-decoration-color: var(--pa); text-underline-offset: 3px; }
 
-/* the rest: a quiet list */
-.hh-lead-points {
-  margin: 1rem 0 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 0.45rem;
-  max-width: 52ch;
+/* preview shell: the About terminal's window, in miniature */
+.lw-shell__bar {
+  display: flex; align-items: center; gap: 0.7rem; flex-shrink: 0; padding: 0.3rem 0.85rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 9%, transparent);
+  background: var(--chrome);
 }
-.hh-lead-points li {
-  position: relative;
-  padding-left: 1rem;
-  font-size: var(--text-sm);
-  line-height: 1.55;
-  color: color-mix(in oklab, var(--foreground) 72%, transparent);
-  text-wrap: pretty;
+.lw-shell__dots { display: inline-flex; gap: 0.4rem; }
+.lw-shell__dots i { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: color-mix(in oklab, var(--foreground) 20%, transparent); }
+.lw-shell__title { font-size: var(--text-2xs); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.lw-shell__full { margin-left: auto; font-size: var(--text-xs); min-height: 2.25rem; }
+.lw-shell__out { flex: 1; min-height: 0; overflow: hidden; padding: 0.8rem 1rem 0.3rem; font-size: 0.78rem; line-height: 1.65; }
+.lw-shell__cmd { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; color: var(--foreground); }
+.lw-shell__cmd-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lw-shell__prompt { color: var(--pa); }
+.lw-shell__out.is-open { overflow-y: auto; overscroll-behavior: contain; }
+.lw-shell__text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.lw-shell__text.is-clamped { display: -webkit-box; -webkit-line-clamp: 12; -webkit-box-orient: vertical; overflow: hidden; }
+.lw-shell__line { display: block; color: color-mix(in oklab, var(--foreground) 86%, transparent); }
+/* label/value and bullet rows hang their wrapped text (width set inline per row);
+   the facts sit a breath below the highlights */
+.lw-shell__line:not(.lw-shell__line--muted) + .lw-shell__line--muted.is-hung { margin-top: 0.5rem; }
+.lw-shell__line--muted { color: var(--muted); }
+.lw-shell__line--accent { color: var(--pa); }
+.lw-shell__line--error { color: var(--status-error-soft); }
+.lw-shell__hint { color: var(--muted); }
+.lw-shell__more { flex-shrink: 0; color: var(--pa); text-decoration: underline; text-underline-offset: 3px; min-height: 1.5rem; }
+.lw-shell__more:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 4px; }
+.lw-shell__chips { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.3rem 1rem 0.5rem; }
+.lw-chip {
+  min-height: 1.85rem; padding: 0 0.65rem; border-radius: 9999px;
+  border: 1px solid color-mix(in oklab, var(--foreground) 20%, transparent);
+  font: 0.7rem var(--font-geist-mono), monospace; color: var(--foreground);
+  transition: background-color 200ms var(--ease-out), border-color 200ms var(--ease-out);
 }
-.hh-lead-points li::before {
-  content: "";
-  position: absolute;
-  left: 0.15rem;
-  top: 0.7em;
-  width: 0.35rem;
-  height: 1px;
-  background: color-mix(in oklab, var(--foreground) 45%, transparent);
+.lw-chip:hover:not(:disabled) { background: color-mix(in oklab, var(--foreground) 7%, transparent); }
+.lw-chip--key { border-color: color-mix(in oklab, var(--pa) 70%, transparent); background: color-mix(in oklab, var(--pa) 12%, transparent); }
+.lw-chip:disabled { opacity: 0.5; cursor: progress; }
+.lw-chip:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.lw-shell__form {
+  display: flex; align-items: center; gap: 0.5rem; margin: 0 1rem 0.8rem; padding: 0 0.7rem;
+  border-radius: var(--radius-md, 10px); border: 1px solid color-mix(in oklab, var(--foreground) 12%, transparent);
+  font-size: 0.75rem;
 }
-/* the left column: the lead, then the portfolio itself on a hairline */
-.hh-main { display: flex; flex-direction: column; min-width: 0; }
-.hh-item--under { border-top: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent); max-width: 52ch; }
-/* wide: the portfolio rests on the column's floor, so both columns end on
-   the same line (the lead takes the slack above it) */
-@media (min-width: 900px) {
-  .hh-item--under { margin-top: auto; }
-}
-.hh-list { list-style: none; margin: 0; padding: 0; }
-.hh-list > li + li { border-top: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent); }
-.hh-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  padding: 1.5rem 0;
-  border-radius: var(--radius-md);
-}
-.hh-item-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
-.hh-item-title { font-size: var(--text-lg); font-weight: 500; letter-spacing: -0.01em; color: var(--foreground); }
-.hh-item-year { font-size: var(--text-xs); color: var(--muted); font-variant-numeric: tabular-nums; }
-.hh-item-desc {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  overflow: hidden;
-  font-size: var(--text-sm);
-  line-height: 1.55;
-  color: color-mix(in oklab, var(--foreground) 72%, transparent);
-}
-.hh-item .hh-tech { margin-top: 0.1rem; }
-@media (min-width: 900px) { .hh-item-desc { -webkit-line-clamp: 4; } } /* room for the full blurb beside the lead */
+.lw-shell__form:focus-within { border-color: var(--pa); box-shadow: 0 0 0 1px var(--pa); }
+.lw-shell__input { flex: 1; min-width: 0; min-height: 2.25rem; background: transparent; color: var(--foreground); outline: none; caret-color: var(--pa); }
+.lw-shell__input::placeholder { color: var(--muted); }
+.lw-shell__limit { font-size: var(--text-2xs); color: var(--muted); white-space: nowrap; }
+/* the narrowest phones give the input the whole row */
+@media (max-width: 400px) { .lw-shell__limit { display: none; } }
+
+/* the year in commits */
+.lw-year { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent); }
+.lw-year__stats { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.3rem 1.25rem; margin-bottom: 0.75rem; }
+.lw-year__sentence { font-size: var(--text-sm); color: var(--muted); }
+.lw-year__stats b { font-weight: 600; color: var(--foreground); font-variant-numeric: tabular-nums; }
+.lw-year__push { font-size: var(--text-2xs); color: var(--muted); }
+.lw-year__push a { color: var(--foreground); text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
+.lw-year__svg { display: block; width: 100%; height: auto; aspect-ratio: 739 / 111; }
+.lw-year__scroll:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 4px; }
+.lw-year__foot { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-top: 0.45rem; font-size: var(--text-2xs); color: var(--muted); }
+.lw-year__foot a { text-decoration: underline; text-underline-offset: 3px; min-height: 1.5rem; display: inline-flex; align-items: center; }
+.lw-year__foot a:hover { color: var(--foreground); }
+.lw-year__legend { display: inline-flex; align-items: center; gap: 0.3rem; }
+.lw a:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 4px; }
+
+@keyframes lw-swap { from { opacity: 0; } to { opacity: 1; } }
+
+/* hero "now:" row links */
+.live-now__link { color: var(--foreground); text-decoration: underline; text-decoration-color: color-mix(in oklab, var(--accent) 70%, transparent); text-underline-offset: 3px; }
+.live-now__link:hover { text-decoration-color: var(--accent); }
+.live-now__link:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 4px; }
+
+/* one column (tablet and phone): the case joins the flow under the plaque
+   instead of floating over it */
 @media (max-width: 899px) {
-  .hh-list { border-top: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent); }
+  .lw-hall { min-height: 0; padding-bottom: 0.9rem; }
+  .lw-case { position: relative; left: auto; bottom: auto; transform: none; width: min(82%, 26rem); margin: 1rem auto 0; }
 }
+/* phones: no auto-rotation; the graph scrolls sideways */
+@media (max-width: 640px) {
+  .lw-ctl { width: 100%; gap: 0.5rem; }
+  /* phones: the bars share the row; only the current project is named (the
+     plaque below names it in full anyway) */
+  .lw-seg { flex: 1; min-width: 0; }
+  .lw-seg__btn { flex: 1; width: auto; min-width: 0; }
+  .lw-seg__btn:not(.is-on) .lw-seg__label { visibility: hidden; }
+  .lw-seg__btn.is-on .lw-seg__label { overflow: visible; }
 
-/* hover / focus: the title takes an accent underline, the arrow steps forward */
-.hh-title-text {
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.2em;
-  text-decoration-color: transparent;
-  transition: text-decoration-color 0.25s ease;
+  .lw-plaque { flex-direction: column; gap: 0.6rem; }
+  /* the stacked plaque sits where the ceiling line would run through its text */
+  .lw-hall__ceil { display: none; }
+  .lw-shell { min-height: 15rem; }
+  .lw-year__scroll { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
+  .lw-museum__foot { flex-wrap: wrap; row-gap: 0; white-space: normal; padding-bottom: 0.6rem; }
+  .lw-museum__foot > .lw-museum__repo-line { flex: 1 1 100%; white-space: normal; overflow: visible; }
+  .lw-shell__host { display: none; }
+  .lw-shell__text.is-clamped { -webkit-line-clamp: 8; }
+  .lw-year__svg { width: 640px; max-width: none; }
+  .lw-year__push { margin-left: 0; }
 }
-@media (hover: hover) {
-  .hh-lead:hover .hh-title-text,
-  .hh-item:hover .hh-title-text { text-decoration-color: color-mix(in oklab, var(--accent) 70%, transparent); }
-  .hh-lead:hover .hh-open span,
-  .hh-all:hover span { transform: translateX(3px); }
-  .hh-all:hover { color: var(--foreground); }
-}
-.hh-lead:focus-visible,
-.hh-item:focus-visible { outline: 2px solid var(--ring); outline-offset: 4px; }
-.hh-lead:focus-visible .hh-title-text,
-.hh-item:focus-visible .hh-title-text { text-decoration-color: color-mix(in oklab, var(--accent) 70%, transparent); }
-
-/* currently: a label / value row */
-.hh-now {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.6rem;
-  margin-top: clamp(1.75rem, 4vw, 2.5rem);
-  padding-top: clamp(1.25rem, 3vw, 1.75rem);
-  border-top: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
-}
-@media (min-width: 900px) {
-  .hh-now { grid-template-columns: 10rem minmax(0, 1fr); gap: 2rem; }
-}
-.hh-now-label { font-size: var(--text-base); font-weight: 500; color: var(--foreground); }
-.hh-now-text { max-width: 60ch; font-size: var(--text-base); line-height: 1.6; color: color-mix(in oklab, var(--foreground) 82%, transparent); text-wrap: pretty; }
-.hh-now-link {
-  font-weight: 500;
-  color: var(--foreground);
-  text-decoration: underline;
-  text-decoration-color: color-mix(in oklab, var(--foreground) 35%, transparent);
-  text-underline-offset: 3px;
-  transition: text-decoration-color 0.2s ease;
-}
-.hh-now-link:hover { text-decoration-color: var(--foreground); }
-.hh-now-link:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: var(--radius-xs); }
-.hh-now-stack { margin-top: 0.75rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem 0.75rem; font-size: var(--text-sm); }
-.hh-now-stack-label { color: var(--muted); }
-.hh-stack { display: inline-flex; flex-wrap: wrap; row-gap: 0.25rem; color: color-mix(in oklab, var(--foreground) 82%, transparent); }
-.hh-stack-item { white-space: nowrap; }
-.hh-stack-sep { margin: 0 0.55rem; color: color-mix(in oklab, var(--foreground) 28%, transparent); }
-
 @media (prefers-reduced-motion: reduce) {
-  .hh-title-text, .hh-open span, .hh-all span { transition: none; }
-  .hh-lead:hover .hh-open span, .hh-all:hover span { transform: none; }
+  .lw-hall { animation: none; }
 }
 
 /* ============================================================
@@ -5483,8 +6211,13 @@ html.kbd-used .sk__keys { display: inline-flex; margin-left: auto; }
   justify-content: center;
   padding: 0 1.5rem;
   border-radius: 9999px;
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
   font-size: var(--text-base);
   font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
   transform: translate(var(--mx, 0px), var(--my, 0px));
   /* soft, no-overshoot settle — reads springy without bouncing (DESIGN.md) */
   transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease,
@@ -5505,6 +6238,7 @@ html.kbd-used .sk__keys { display: inline-flex; margin-left: auto; }
 }
 .mag-btn--outline {
   border: 1px solid color-mix(in oklab, var(--foreground) 20%, transparent);
+  background: transparent;
   color: var(--foreground);
 }
 .mag-btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
@@ -5835,8 +6569,8 @@ html.kbd-used .sk__keys { display: inline-flex; margin-left: auto; }
 }
 
 /* 44px tap areas for links that sit in a sentence or alone on a line */
-.xp__org-link, .xp__link, .hh-now-link { position: relative; }
-.xp__org-link::after, .xp__link::after, .hh-now-link::after {
+.xp__org-link, .xp__link, .live-now__link, .site-footer__link, .notes__rss, .heat__link, .lw-museum__repo, .lw-year__push a { position: relative; }
+.xp__org-link::after, .xp__link::after, .live-now__link::after, .site-footer__link::after, .notes__rss::after, .heat__link::after, .lw-museum__repo::after, .lw-year__push a::after {
   content: "";
   position: absolute;
   inset: 50% -0.15rem auto;
@@ -5860,3 +6594,1848 @@ html.kbd-used .sk__keys { display: inline-flex; margin-left: auto; }
 }
 @keyframes cube-breathe { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.8; } }
 @media (prefers-reduced-motion: reduce) { .cube-loading__face { animation: none; opacity: 0.5; } }
+
+/* ---- footer links ----------------------------------------------------------- */
+.site-footer__link {
+  color: var(--muted); text-decoration: underline; text-underline-offset: 3px;
+  text-decoration-color: color-mix(in oklab, var(--foreground) 25%, transparent);
+  transition: color 200ms var(--ease-out), text-decoration-color 200ms var(--ease-out);
+}
+.site-footer__link:hover { color: var(--foreground); text-decoration-color: var(--accent); }
+.site-footer__link:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 4px; }
+
+/* ---- notes: an index and a reading column ------------------------------------ */
+.notes__inner, .note { padding-top: clamp(6rem, 14vh, 8.5rem); padding-bottom: clamp(3rem, 8vh, 5rem); }
+.notes__title {
+  font-size: var(--text-page-title); font-weight: 500; line-height: 1.08; letter-spacing: -0.025em;
+}
+.notes__lead { margin-top: 1rem; color: var(--muted); font-size: var(--text-page-lead); line-height: 1.6; max-width: 58ch; }
+.notes__rss {
+  font-family: var(--font-geist-mono), monospace; font-size: var(--text-xs); color: var(--muted);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.notes__rss:hover { color: var(--foreground); }
+.notes__list { list-style: none; margin: clamp(2.5rem, 6vw, 3.5rem) 0 0; padding: 0; }
+.notes__item + .notes__item { border-top: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent); }
+.notes__link {
+  display: flex; flex-direction: column; gap: 0.35rem;
+  padding: 1.3rem 0.25rem;
+  border-radius: var(--radius-lg);
+  transition: background-color 200ms var(--ease-out);
+}
+@media (hover: hover) {
+  .notes__link:hover { background: color-mix(in oklab, var(--foreground) 4%, transparent); }
+  .notes__link:hover .notes__item-title { color: var(--accent); }
+}
+.notes__link:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.notes__item-title { font-size: var(--text-lg); font-weight: 500; color: var(--foreground); transition: color 200ms var(--ease-out); }
+.notes__item-summary { color: var(--muted); line-height: 1.55; }
+.notes__item-meta { font-size: var(--text-xs); color: var(--muted); }
+.notes__draft {
+  margin-left: 0.6rem; padding: 0.1rem 0.45rem; border-radius: 4px;
+  border: 1px dashed color-mix(in oklab, var(--accent) 60%, transparent);
+  font: var(--text-2xs) var(--font-geist-mono), monospace; color: var(--accent);
+  vertical-align: middle; letter-spacing: 0.04em; text-transform: uppercase;
+}
+.notes__empty { margin-top: 2.5rem; color: var(--muted); }
+
+.note__back {
+  display: inline-flex; align-items: center; min-height: 2.75rem;
+  font-size: var(--text-sm); color: var(--muted);
+}
+.note__back:hover { color: var(--foreground); }
+.note__back:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 4px; }
+.note__title {
+  margin-top: 0.6rem;
+  font-size: clamp(2rem, 4.5vw, 3rem); font-weight: 500; line-height: 1.1; letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.note__meta { margin-top: 0.8rem; font-size: var(--text-xs); color: var(--muted); }
+.note__body {
+  /* a reading measure: ~70 characters, not the column's full width */
+  max-width: 35em; /* ch measures Geist's narrow 0; em keeps ~70 real characters */
+  margin-top: clamp(2rem, 5vw, 3rem);
+  font-size: 1.0625rem; line-height: 1.75; color: color-mix(in oklab, var(--foreground) 88%, var(--muted));
+}
+.note__body > * + * { margin-top: 1.15em; }
+.note__body h2 {
+  margin-top: 2.2em; font-size: var(--text-xl); font-weight: 600; line-height: 1.25;
+  color: var(--foreground); letter-spacing: -0.01em;
+}
+.note__body h3 { margin-top: 1.8em; font-size: var(--text-lg); font-weight: 600; color: var(--foreground); }
+.note__body a {
+  color: var(--foreground); text-decoration: underline; text-underline-offset: 3px;
+  text-decoration-color: var(--accent);
+}
+.note__body strong { color: var(--foreground); font-weight: 600; }
+.note__body ul, .note__body ol { padding-left: 1.3em; }
+.note__body ul { list-style: disc; }
+.note__body ol { list-style: decimal; }
+.note__body li + li { margin-top: 0.35em; }
+.note__body li::marker { color: var(--muted); }
+.note__body :not(pre) > code {
+  padding: 0.12em 0.38em; border-radius: 5px;
+  background: color-mix(in oklab, var(--foreground) 9%, transparent);
+  font: 0.88em var(--font-geist-mono), monospace; color: var(--foreground);
+}
+.note__body pre {
+  overflow-x: auto; padding: 1rem 1.15rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in oklab, var(--foreground) 9%, transparent);
+  font: 0.86rem/1.65 var(--font-geist-mono), monospace;
+  /* shiki paints its own background inline; keep it, just round the box */
+}
+.note__body pre code { font: inherit; }
+.note__body blockquote {
+  padding-left: 1rem; border-left: 2px solid var(--accent); color: var(--muted);
+}
+.note__pager {
+  display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+  margin-top: clamp(3rem, 7vw, 4.5rem); padding-top: 1.5rem;
+  border-top: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+.note__pager-link {
+  display: flex; flex-direction: column; gap: 0.2rem; max-width: 48%;
+  min-height: 2.75rem; color: var(--foreground);
+}
+.note__pager-link--next { text-align: right; margin-left: auto; }
+.note__pager-link:hover { color: var(--accent); }
+.note__pager-link:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 4px; }
+.note__pager-kicker { font: var(--text-2xs) var(--font-geist-mono), monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+@media (max-width: 640px) {
+  .note__pager-link { max-width: 100%; }
+}
+
+/* ---- theme toggle: end of the nav pill (desktop), end of the dock (phones) ---- */
+.theme-toggle {
+  flex-shrink: 0; display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 9999px;
+  color: var(--muted); transition: color 200ms var(--ease-out), background-color 200ms var(--ease-out);
+}
+.theme-toggle:hover { color: var(--foreground); background: color-mix(in oklab, var(--foreground) 8%, transparent); }
+.theme-toggle:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.theme-toggle--nav { position: relative; margin-left: 0.85rem; }
+/* a hairline "|" between the page links and the theme switch */
+.theme-toggle--nav::before {
+  content: ""; position: absolute; left: -0.45rem; top: 50%; width: 1px; height: 1.1rem;
+  transform: translateY(-50%); background: color-mix(in oklab, var(--foreground) 18%, transparent);
+}
+/* shadcn's swap: the icon for the theme you're in; the other turns and shrinks away */
+.theme-toggle__icons { position: relative; display: block; width: 17px; height: 17px; }
+.theme-toggle__icons svg {
+  position: absolute; inset: 0;
+  transition: transform 420ms var(--ease-out), opacity 260ms var(--ease-out);
+}
+/* the icon is the setting: sun = light, moon = dark, monitor = match system */
+.theme-toggle[data-pref]:not([data-pref="light"]) .theme-toggle__sun { transform: rotate(-90deg) scale(0); opacity: 0; }
+.theme-toggle[data-pref]:not([data-pref="dark"]) .theme-toggle__moon { transform: rotate(90deg) scale(0); opacity: 0; }
+.theme-toggle[data-pref]:not([data-pref="system"]) .theme-toggle__monitor { transform: scale(0.4); opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .theme-toggle__icons svg { transition: none; } }
+/* the theme switch spreads in a circle from the button (lib/theme.ts animates the
+   new snapshot's clip-path); the default cross-fade would fight it */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+.theme-toggle--dock { width: 2.5rem; height: 2.75rem; margin-left: 0; border-left: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent); border-radius: 0 9999px 9999px 0; }
+
+/* ---- the solver's 2.5D cube (rubik/FlatCube.tsx) ------------------------------ */
+.fc {
+  /* solver stickers: night colours, the back face lavender (the accent) */
+  --rb-U: var(--cube-white); --rb-D: var(--cube-indigo); --rb-L: var(--cube-blue);
+  --rb-R: var(--cube-purple); --rb-F: var(--cube-sky); --rb-B: #a78bfa;
+  --fc-plastic: #0b0b12;
+  --fc-s: clamp(11rem, 30vw, 15rem);  /* the front face */
+  --fc-depth: calc(var(--fc-s) * 0.22); /* how much top and side show */
+  position: relative;
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.5rem;
+  padding: calc(var(--fc-depth) + 3.6rem) 0.25rem 3.8rem;
+}
+:root[data-theme="light"] .fc {
+  --rb-U: #fbfaff; --rb-D: var(--cube-l4); --rb-L: var(--cube-l2);
+  --rb-R: var(--cube-l1); --rb-F: var(--cube-l5); --rb-B: var(--cube-l6);
+  --fc-plastic: #0e0c16;
+}
+.fc-cube {
+  position: relative; justify-self: center;
+  width: var(--fc-s); height: var(--fc-s);
+  /* the side face sticks out right: centre the whole cube, not just the front */
+  margin-right: var(--fc-depth);
+}
+.fc-face {
+  position: absolute; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  gap: 5px; padding: 5px; overflow: hidden; background: var(--fc-plastic);
+}
+.fc-face--front {
+  inset: 0; border-radius: 12px;
+  box-shadow: 0 26px 50px -24px color-mix(in oklab, var(--shade) 70%, transparent);
+}
+.fc-face--top {
+  left: 0; bottom: 100%; width: 100%; height: var(--fc-depth);
+  transform-origin: bottom left; transform: skewX(-45deg); gap: 3px; padding: 3px 5px;
+  border-radius: 10px 10px 0 0;
+}
+.fc-face--right {
+  left: 100%; top: 0; width: var(--fc-depth); height: 100%;
+  transform-origin: top left; transform: skewY(-45deg); gap: 5px 3px; padding: 5px 3px;
+  border-radius: 0 10px 10px 0;
+}
+.fc-cell { display: block; min-width: 0; border-radius: 6px; }
+.fc-face--front .fc-cell {
+  box-shadow: inset 0 -3px 0 color-mix(in oklab, black 18%, transparent), inset 0 2px 0 color-mix(in oklab, white 28%, transparent);
+}
+.fc-face--top .fc-cell { border-radius: 3px; filter: brightness(1.05); }
+.fc-face--right .fc-cell { border-radius: 3px; filter: brightness(0.8); }
+
+/* controls: quiet outlines, violet on hover or focus, so the cube stays the subject */
+.fc-arrow {
+  position: absolute; z-index: 1; display: grid; place-items: center;
+  width: 2.25rem; height: 2.25rem; transform: translate(-50%, -50%); border-radius: 9999px;
+  border: 1px solid color-mix(in oklab, var(--foreground) 20%, transparent);
+  background: var(--surface); color: var(--foreground); font-size: 0.95rem; line-height: 1;
+  transition: background-color 160ms var(--ease-out), color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+.fc-arrow::after { content: ""; position: absolute; inset: -0.25rem; border-radius: inherit; } /* 44px target */
+.fc-arrow:hover, .fc-arrow:focus-visible { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.fc-arrow:focus-visible, .fc-rot:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.fc-arrow:active { transform: translate(-50%, -50%) scale(0.92); }
+.fc-rot {
+  display: grid; place-items: center; width: 3rem; height: 3rem; border-radius: 9999px;
+  border: 1px solid color-mix(in oklab, var(--foreground) 16%, transparent);
+  color: var(--foreground); background: var(--surface);
+  transition: background-color 160ms var(--ease-out), color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+.fc-rot:hover { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+
+/* the unfolded cube: a map of all six faces, the front one outlined */
+.fc-map {
+  position: absolute; top: 0.25rem; right: 0.25rem;
+  display: grid; grid-template-columns: repeat(4, 1.35rem); gap: 2px;
+}
+.fc-map__face { display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); gap: 1px; padding: 1px; height: 1.35rem; border-radius: 3px; }
+.fc-map__face:not(:empty) { background: var(--fc-plastic); }
+.fc-map__face.is-front { outline: 1.5px solid var(--accent); outline-offset: 1px; }
+.fc-map__face i { display: block; border-radius: 1px; }
+
+/* each move slides the new stickers in from where they came (clipped by the face) */
+@keyframes fc-in-up { from { transform: translateY(115%); } }
+@keyframes fc-in-down { from { transform: translateY(-115%); } }
+@keyframes fc-in-left { from { transform: translateX(115%); } }
+@keyframes fc-in-right { from { transform: translateX(-115%); } }
+@keyframes fc-in-fade { from { opacity: 0.2; } }
+@keyframes fc-spin-cw { from { transform: rotate(-90deg); } }
+@keyframes fc-spin-ccw { from { transform: rotate(90deg); } }
+.fc-in-up { animation: fc-in-up 200ms var(--ease-out); }
+.fc-in-down { animation: fc-in-down 200ms var(--ease-out); }
+.fc-in-left { animation: fc-in-left 200ms var(--ease-out); }
+.fc-in-right { animation: fc-in-right 200ms var(--ease-out); }
+.fc-in-fade { animation: fc-in-fade 220ms var(--ease-out); }
+.fc-spin-cw { animation: fc-spin-cw 240ms var(--ease-out); }
+.fc-spin-ccw { animation: fc-spin-ccw 240ms var(--ease-out); }
+@media (prefers-reduced-motion: reduce) {
+  .fc-in-up, .fc-in-down, .fc-in-left, .fc-in-right, .fc-in-fade, .fc-spin-cw, .fc-spin-ccw { animation: none; }
+}
+@media (max-width: 640px) {
+  .fc { --fc-s: min(52vw, 12rem); grid-template-columns: 1fr; padding-top: calc(var(--fc-depth) + 4.6rem); }
+  /* phones: the turn buttons sit below the cube, side by side */
+  .fc-rot { position: absolute; bottom: 0; width: 2.75rem; height: 2.75rem; }
+  .fc-rot--ccw { left: calc(50% - 3.4rem); }
+  .fc-rot--cw { left: calc(50% + 0.6rem); }
+  .fc { padding-bottom: 7rem; }
+}
+
+/* the solver in daylight: a white sheet over a dimmed page, no museum night */
+:root[data-theme="light"] .rubik-modal__backdrop { background: color-mix(in oklab, var(--shade) 38%, transparent); }
+:root[data-theme="light"] .rubik-modal__panel { background: var(--background); }
+:root[data-theme="light"] .rubik-modal__board { background: var(--surface); }
+:root[data-theme="light"] .rubik-modal__tabs { background: color-mix(in oklab, var(--foreground) 6%, transparent); }
+:root[data-theme="light"] .rubik-modal__tab--on { background: var(--surface); color: var(--foreground); box-shadow: 0 1px 3px color-mix(in oklab, var(--shade) 18%, transparent); }
+:root[data-theme="light"] .rubik-modal__btn--primary { color: var(--accent-fg); }
+:root[data-theme="light"] .rubik-modal__btn--primary:hover { box-shadow: 0 8px 20px -10px color-mix(in oklab, var(--accent) 60%, transparent); }
+
+/* ---- Inside the cube: the island world (components/world) ---------------- */
+.cube-world {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  background: #0b0912;
+  color: var(--foreground);
+  overscroll-behavior: contain;
+}
+.cube-world__stage {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+  touch-action: none;
+}
+.cube-world__stage:active {
+  cursor: grabbing;
+}
+.cube-world__top {
+  z-index: 30; /* above the 3D pins */
+  position: absolute;
+  inset: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1rem 0;
+  pointer-events: none;
+}
+.cube-world__top > * {
+  pointer-events: auto;
+}
+.cube-world__exit {
+  white-space: nowrap;
+  flex: none;
+}
+.cube-world__hint {
+  max-width: min(46rem, calc(100vw - 12rem));
+}
+.cube-world__title {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  outline: none;
+}
+.cube-world__hint {
+  margin-top: 0;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.cube-world__hint b {
+  color: var(--foreground);
+  font-weight: 600;
+}
+.cube-world__control-guide {
+  position: relative;
+  z-index: 36;
+}
+.cube-world__control-guide summary {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0 0.8rem;
+  border: 1px solid color-mix(in oklab, var(--foreground) 16%, transparent);
+  border-radius: 9999px;
+  color: var(--muted);
+  background: color-mix(in oklab, var(--surface) 88%, transparent);
+  font-size: var(--text-xs, 0.8125rem);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.cube-world__control-guide summary::-webkit-details-marker {
+  display: none;
+}
+.cube-world__control-guide summary::after {
+  width: 0.42rem;
+  height: 0.42rem;
+  margin: -0.16rem 0 0 0.12rem;
+  border-right: 1.5px solid var(--accent);
+  border-bottom: 1.5px solid var(--accent);
+  content: "";
+  transform: rotate(45deg);
+}
+.cube-world__control-guide[open] summary::after {
+  margin-top: 0.16rem;
+  transform: rotate(225deg);
+}
+.cube-world__control-guide > p {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  width: min(28rem, calc(100vw - 2rem));
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid color-mix(in oklab, var(--foreground) 14%, transparent);
+  border-radius: var(--radius-lg, 12px);
+  color: var(--foreground);
+  background: var(--surface);
+  box-shadow: 0 8px 24px color-mix(in oklab, var(--shade) 26%, transparent);
+  font-size: var(--text-sm, 0.875rem);
+  line-height: 1.55;
+}
+.cube-world__exit,
+.cube-world__back,
+.cube-world__go,
+.cube-world__bar button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in oklab, var(--foreground) 14%, transparent);
+  background: color-mix(in oklab, var(--surface) 80%, transparent);
+  padding: 0 1rem;
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: 500;
+  color: var(--foreground);
+  backdrop-filter: blur(8px);
+  transition: border-color 150ms, background-color 150ms, color 150ms;
+}
+.cube-world__exit:hover,
+.cube-world__back:hover {
+  border-color: color-mix(in oklab, var(--foreground) 30%, transparent);
+}
+.cube-world :focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.cube-world__bar {
+  z-index: 30; /* above the 3D pins */
+  position: absolute;
+  left: 50%;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.15rem;
+  max-width: calc(100% - 2rem);
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0.25rem;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
+  background: color-mix(in oklab, var(--surface) 75%, transparent);
+  backdrop-filter: blur(10px);
+}
+.cube-world__bar button {
+  flex: none;
+  border-color: transparent;
+  background: transparent;
+  backdrop-filter: none;
+  color: var(--muted);
+  padding: 0 0.9rem;
+}
+.cube-world__bar button:hover {
+  color: var(--foreground);
+}
+.cube-world__bar button[aria-pressed="true"] {
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--foreground) 9%, transparent);
+}
+.cube-world__bar button[data-destination="true"] {
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--accent) 16%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 54%, transparent);
+}
+/* each place's sticker colour; hollow until you've been there */
+.cube-world__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-hairline, 2px);
+  /* the white face's dot needs an edge to show on paper */
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 18%, transparent);
+}
+/* been there: a check, not a fainter dot */
+.cube-world__seen {
+  margin-left: -0.15rem;
+  color: var(--accent);
+}
+.cube-world__how-short {
+  display: none;
+}
+.cube-world__card {
+  z-index: 30; /* above the 3D pins */
+  position: absolute;
+  right: 1rem;
+  bottom: calc(max(1rem, env(safe-area-inset-bottom)) + 3.75rem);
+  width: min(23rem, calc(100% - 2rem));
+  border-radius: var(--radius-xl, 16px);
+  border: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
+  background: color-mix(in oklab, var(--surface) 90%, transparent);
+  backdrop-filter: blur(12px);
+  padding: 1.25rem 1.35rem;
+}
+.cube-world__kind {
+  margin-top: 0.1rem;
+  font-size: var(--text-xs, 0.8125rem);
+  color: var(--muted);
+}
+.cube-world__card h3 {
+  outline: none;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.cube-world__card ul {
+  margin-top: 0.5rem;
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.875rem;
+  color: color-mix(in oklab, var(--foreground) 82%, transparent);
+  overflow-wrap: anywhere;
+}
+.cube-world__actions {
+  margin-top: 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.cube-world__difficulty-picker {
+  gap: 0.4rem;
+}
+.cube-world__difficulty {
+  flex: 1 1 5.5rem;
+  min-width: 0;
+  min-height: 3.6rem;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 0.15rem;
+  border: 1px solid color-mix(in oklab, var(--foreground) 13%, transparent);
+  border-radius: 0.9rem;
+  padding: 0.55rem 0.65rem;
+  background: color-mix(in oklab, var(--surface) 82%, transparent);
+  color: var(--foreground);
+  text-align: left;
+  transition: border-color 150ms, background-color 150ms, transform 150ms;
+}
+.cube-world__difficulty:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in oklab, var(--foreground) 30%, transparent);
+}
+.cube-world__difficulty[aria-pressed="true"] {
+  border-color: color-mix(in oklab, var(--accent) 72%, transparent);
+  background: color-mix(in oklab, var(--accent) 13%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 22%, transparent);
+}
+.cube-world__difficulty span {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.cube-world__difficulty small {
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.25;
+}
+/* ink primary, like the hero's: accent fill belongs to the contact form */
+.cube-world__go {
+  border-color: transparent;
+  background: var(--foreground);
+  color: var(--background);
+  backdrop-filter: none;
+}
+.cube-world__go:hover {
+  opacity: 0.9;
+}
+/* place signs: museum signage, tracked mono caps over a thin stem in the
+   place's sticker colour, standing on the building */
+.cube-world__pin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.25rem 0.4rem;
+  border: 0;
+  background: none;
+  color: var(--foreground);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  text-shadow: 0 1px 8px color-mix(in oklab, var(--background) 90%, transparent);
+}
+.cube-world__pin-name {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: var(--text-2xs, 0.75rem);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+/* the overview shows names only; a sign's second line comes up on hover or
+   when its place is picked, so six signs don't read as twelve */
+.cube-world__pin-kind {
+  display: none;
+  font-size: var(--text-2xs, 0.75rem);
+  color: var(--muted);
+}
+.cube-world__pin:hover .cube-world__pin-kind,
+.cube-world__pin.is-on .cube-world__pin-kind {
+  display: block;
+}
+.cube-world__pin-stem {
+  width: 1px;
+  height: 1.1rem;
+  margin-top: 0.15rem;
+  background: linear-gradient(var(--pin, var(--accent)), transparent);
+}
+.cube-world__pin.is-on .cube-world__pin-name {
+  color: var(--pin, var(--accent));
+}
+@media (max-width: 639px) {
+  .cube-world__how {
+    display: none;
+  }
+  .cube-world__how-short {
+    display: inline;
+  }
+  /* six places in a 3×2 grid: nothing scrolls off the edge */
+  .cube-world__bar {
+    left: 1rem;
+    right: 1rem;
+    transform: none;
+    max-width: none;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-radius: var(--radius-xl, 16px);
+  }
+  .cube-world__bar button {
+    justify-content: center;
+    padding: 0 0.4rem;
+  }
+  .cube-world__card {
+    bottom: calc(max(1rem, env(safe-area-inset-bottom)) + 7.2rem);
+    max-height: 46dvh;
+  }
+  .cube-world__card {
+    left: 1rem;
+    right: 1rem;
+    width: auto;
+  }
+  .cube-world__pin-kind {
+    display: none;
+  }
+}
+
+/* ---- Things to poke (components/PokeRow): museum rooms + the island ----- */
+.pokes {
+  margin-top: 0.85rem;
+}
+.pokes__heading {
+  font-size: var(--text-xs, 0.8125rem);
+  color: var(--muted);
+}
+.pokes__row {
+  margin-top: 0.4rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.pokes__thing {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  border: 1px dashed color-mix(in oklab, var(--accent) 50%, transparent);
+  background: transparent;
+  padding: 0 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  transition: border-color 150ms, background-color 150ms, transform 150ms;
+}
+.pokes__thing:hover {
+  border-style: solid;
+  border-color: var(--accent);
+}
+.pokes__thing:active {
+  transform: scale(0.96);
+}
+.pokes__thing[aria-pressed="true"] {
+  border-style: solid;
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+}
+.pokes__thing:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+@media (pointer: coarse) {
+  .pokes__thing {
+    min-height: 44px;
+  }
+}
+.pokes__bubble {
+  margin-top: 0.5rem;
+  max-width: 36rem;
+  border-left: 2px solid var(--accent);
+  padding: 0.15rem 0 0.15rem 0.7rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: color-mix(in oklab, var(--foreground) 88%, transparent);
+  overflow-wrap: anywhere;
+}
+.pokes__bubble[data-empty] {
+  display: none;
+}
+.pokes__again {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pokes__bubble:not([data-empty]) {
+    animation: pokes-pop 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}
+@keyframes pokes-pop {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.cube-world__card {
+  max-height: calc(100dvh - 9rem);
+  overflow-y: auto;
+}
+.cube-world__lead {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+/* the quiet row under the buttons: Controls and the sky line side by side, wrapping on a phone */
+.cube-world__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1rem;
+  max-width: min(46rem, calc(100vw - 12rem));
+}
+.cube-world__meta .cube-world__sky {
+  margin: 0;
+}
+/* the phone's stick: a ring where the thumb landed, a knob that follows it */
+.cube-world__stick {
+  position: absolute;
+  z-index: 31;
+  width: 96px;
+  height: 96px;
+  margin: -48px 0 0 -48px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in oklab, var(--foreground) 22%, transparent);
+  background: color-mix(in oklab, var(--surface) 45%, transparent);
+  pointer-events: none;
+}
+.cube-world__stick span {
+  position: absolute;
+  left: 28px;
+  top: 28px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--accent) 70%, transparent);
+}
+/* walking: the card shrinks to its title and way in, so the town stays in view */
+.cube-world__card.is-compact {
+  padding: 0.85rem 1rem;
+  width: min(17rem, calc(100% - 2rem));
+}
+.cube-world__card.is-compact ul,
+.cube-world__card.is-compact .pokes,
+.cube-world__card.is-compact .cube-world__actions > button {
+  display: none;
+}
+.cube-world__card.is-compact .cube-world__actions {
+  margin-top: 0.6rem;
+}
+.cube-world__discovery { margin-top: 0.7rem; }
+.cube-world__discovery > button { min-height: 44px; width: 100%; justify-content: center; }
+.cube-world__discovery > button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.cube-world__discovery-reply { margin-top: 0.65rem; font-size: 0.8125rem; line-height: 1.5; }
+.cube-world__discovery-reply strong { display: block; font-weight: 600; }
+.cube-world__discovery-reply p { color: var(--muted); margin-top: 0.2rem; }
+.cube-world__discovery-reply a { display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.5rem; text-decoration: underline; text-underline-offset: 3px; min-height: 32px; }
+.cube-world__discovery-reply > button { margin-top: 0.5rem; min-height: 44px; }
+.cube-world__discovery-progress { margin-top: 0.55rem; font-size: 0.75rem; color: var(--muted); }
+/* walking: the action at hand (knock, step through), and what the town says back */
+.cube-world__act {
+  position: absolute;
+  z-index: 31;
+  left: 50%;
+  bottom: calc(max(1rem, env(safe-area-inset-bottom)) + 4.4rem);
+  transform: translateX(-50%);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  border-radius: 9999px;
+  border: 0;
+  background: var(--foreground);
+  color: var(--background);
+  padding: 0 1.1rem;
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: 500;
+}
+.cube-world__act kbd {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: var(--text-2xs, 0.75rem);
+  border: 1px solid color-mix(in oklab, var(--background) 35%, transparent);
+  border-radius: var(--radius-sm, 6px);
+  padding: 0 0.35rem;
+}
+.cube-world__act--secondary {
+  bottom: calc(max(1rem, env(safe-area-inset-bottom)) + 7.8rem);
+  min-height: 44px;
+  background: color-mix(in oklab, var(--foreground) 78%, transparent);
+}
+/* Both station routes share one compact, clearly labelled control. */
+.cube-world__station-actions {
+  position: absolute;
+  z-index: 31;
+  left: 50%;
+  bottom: calc(max(1rem, env(safe-area-inset-bottom)) + 4.4rem);
+  transform: translateX(-50%);
+  width: min(27rem, calc(100% - 2rem));
+  padding: 0.7rem;
+  border: 1px solid rgba(165, 243, 252, 0.25);
+  border-radius: 1rem;
+  background: rgba(17, 15, 36, 0.94);
+  color: #f4f2ff;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.3);
+}
+.cube-world__station-heading { display: flex; align-items: baseline; gap: 0.65rem; padding: 0 0.2rem 0.55rem; }
+.cube-world__station-heading span { color: #a5f3fc; font-size: 0.65rem; letter-spacing: 0.08em; font-weight: 700; }
+.cube-world__station-heading strong { font-size: 0.85rem; font-weight: 600; }
+.cube-world__station-buttons { display: flex; gap: 0.45rem; }
+.cube-world__station-buttons button { flex: 1; min-height: 44px; border: 1px solid rgba(207, 204, 243, 0.3); border-radius: 0.65rem; background: #302a50; color: #f4f2ff; padding: 0.5rem 0.65rem; font-size: 0.8rem; font-weight: 600; }
+.cube-world__station-buttons button:first-child { background: #a5f3fc; color: #10233a; border-color: #a5f3fc; }
+.cube-world__station-buttons button:focus-visible { outline: 2px solid #f4f2ff; outline-offset: 2px; }
+.cube-world__station-buttons kbd { margin-left: 0.35rem; padding: 0.1rem 0.35rem; border: 1px solid currentColor; border-radius: 0.3rem; font-size: 0.7rem; }
+@media (max-width: 639px) {
+  .cube-world__station-actions { bottom: calc(max(1rem, env(safe-area-inset-bottom)) + 7.4rem); }
+  .cube-world__station-heading { flex-wrap: wrap; gap: 0.25rem 0.6rem; }
+}
+.cube-world__toast {
+  position: absolute;
+  z-index: 31;
+  left: 50%;
+  top: 4.5rem;
+  transform: translateX(-50%);
+  width: min(26rem, calc(100% - 2rem));
+  text-align: center;
+  pointer-events: none;
+}
+.cube-world__toast[data-empty] {
+  display: none;
+}
+.cube-world__toast > span {
+  display: grid;
+  gap: 0.25rem;
+  border-radius: var(--radius-xl, 16px);
+  border: 1px solid color-mix(in oklab, var(--foreground) 12%, transparent);
+  background: color-mix(in oklab, var(--surface) 88%, transparent);
+  backdrop-filter: blur(10px);
+  padding: 0.7rem 1rem;
+  font-size: var(--text-sm, 0.875rem);
+}
+.cube-world__toast b {
+  font-weight: 500;
+}
+.cube-world__toast span span {
+  color: var(--muted);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cube-world__toast > span {
+    animation: pokes-pop 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}
+@media (max-width: 639px) {
+  .cube-world__act {
+    bottom: calc(max(1rem, env(safe-area-inset-bottom)) + 7.4rem);
+    left: 1rem;
+    transform: none;
+    max-width: calc(100% - 2rem);
+  }
+  .cube-world__act--secondary {
+    bottom: calc(max(1rem, env(safe-area-inset-bottom)) + 10.8rem);
+  }
+}
+.cube-world__walkbar {
+  display: flex;
+  flex-wrap: wrap; /* on a phone the buttons drop to a second row, whole, rather than squeezing their words */
+  gap: 0.4rem;
+}
+.cube-world__walkbar .cube-world__back {
+  white-space: nowrap;
+}
+.cube-world__turn {
+  width: 44px;
+  justify-content: center;
+  padding: 0;
+}
+@media (max-width: 639px) {
+  /* the hint wraps under itself, never under Exit */
+  .cube-world__hint {
+    max-width: calc(100vw - 9.5rem);
+  }
+  .cube-world__exit {
+    white-space: nowrap;
+  }
+}
+/* a place's sign stands on its anchor point, bottom-centred, so it sits
+   above the building instead of half inside it */
+.cube-world__pin-anchor {
+  transform: translate(-50%, -100%);
+}
+
+/* ---- Inside the cube: photo mode, the passport, the corner buttons ------ */
+/* the speedway: its menu card, leaderboard rows and the big countdown */
+.cube-world__speedway {
+  max-height: calc(100% - 9rem);
+  overflow-y: auto;
+}
+.cube-world__card .cube-world__board {
+  display: grid;
+  gap: 0.15rem;
+  margin-top: 0.35rem;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+.cube-world__board li {
+  display: grid;
+  grid-template-columns: minmax(3rem, auto) 1fr auto;
+  gap: 0.5rem;
+  color: var(--muted);
+}
+.cube-world__board b {
+  color: var(--foreground);
+  font-weight: 600;
+}
+/* the arcade: a cabinet's screen, its score, and touch controls */
+.cube-world__arcade {
+  width: min(32rem, calc(100% - 2rem));
+  max-height: calc(100% - 7rem);
+  overflow-y: auto;
+}
+.cube-world__screen {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 2;
+  margin-top: 0.6rem;
+  border-radius: var(--radius-lg, 12px);
+  border: 1px solid color-mix(in oklab, var(--foreground) 14%, transparent);
+  image-rendering: pixelated;
+}
+.cube-world__score {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.cube-world__score b {
+  color: var(--foreground);
+  font-size: 1rem;
+}
+.cube-world__note {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  overflow-wrap: anywhere;
+}
+.cube-world__best {
+  margin-left: 0.4rem;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.cube-world__pad {
+  display: none;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 0.6rem;
+}
+.cube-world__pad button {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in oklab, var(--foreground) 18%, transparent);
+  background: var(--surface);
+  color: var(--foreground);
+  touch-action: none;
+}
+@media (pointer: coarse) {
+  .cube-world__pad {
+    display: flex;
+  }
+}
+/* the arcade room: over the whole page, cabinets in a grid, then one game */
+.cube-arcade {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  display: grid;
+  place-items: center;
+  padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+  background: color-mix(in oklab, #0b0912 82%, transparent);
+  backdrop-filter: blur(6px);
+}
+.cube-arcade__panel {
+  width: min(90rem, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1.25rem;
+  border-radius: var(--radius-lg, 12px);
+  border: 1px solid color-mix(in oklab, var(--foreground) 14%, transparent);
+  background: var(--surface);
+  color: var(--foreground);
+}
+.cube-arcade__head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+.cube-arcade__head h3 {
+  flex: 1;
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+.cube-arcade__head h3:focus {
+  outline: none;
+}
+.cube-arcade__close {
+  margin-left: auto;
+}
+.cube-arcade__grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.cube-arcade__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  height: 100%;
+  padding: 0.6rem 0.6rem 0.75rem;
+  border-radius: var(--radius-lg, 12px);
+  border: 1px solid color-mix(in oklab, var(--foreground) 12%, transparent);
+  background: color-mix(in oklab, var(--foreground) 3%, transparent);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cube-arcade__card:hover,
+.cube-arcade__card:focus-visible {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 8%, transparent);
+}
+.cube-arcade__card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.cube-arcade__preview {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 2;
+  border-radius: calc(var(--radius-lg, 12px) - 4px);
+  image-rendering: pixelated;
+}
+.cube-arcade__name {
+  margin-top: 0.25rem;
+  font-weight: 600;
+}
+.cube-arcade__how {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.cube-arcade__card--off {
+  border-style: dashed;
+}
+.cube-arcade__card--off .cube-arcade__static {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 3 / 2;
+  border-radius: calc(var(--radius-lg, 12px) - 4px);
+  background: color-mix(in oklab, var(--foreground) 4%, transparent);
+}
+@media (max-width: 1100px) {
+  .cube-arcade__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .cube-arcade__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cube-arcade__how {
+    display: none;
+  }
+}
+.cube-arcade__static {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.8125rem;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+.cube-arcade__play {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem);
+  gap: 1.25rem;
+  align-items: start;
+  margin-top: 0.6rem;
+}
+.cube-arcade__screen {
+  margin-top: 0;
+  max-height: calc(100dvh - 9rem);
+  object-fit: contain;
+}
+@media (max-width: 760px) {
+  .cube-arcade__play {
+    grid-template-columns: 1fr;
+  }
+}
+/* mid-race, the speedway's menu is one button, out of the way */
+.cube-world__race-exit {
+  position: absolute;
+  z-index: 31;
+  right: 1rem;
+  bottom: calc(max(1rem, env(safe-area-inset-bottom)) + 3.75rem);
+}
+.cube-world__countdown {
+  position: absolute;
+  z-index: 32;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: clamp(4rem, 14vw, 9rem);
+  font-weight: 700;
+  color: var(--foreground);
+  text-shadow: 0 0 40px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cube-world__countdown {
+    animation: cube-world-count 700ms ease-out both;
+  }
+}
+@keyframes cube-world-count {
+  0% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+}
+/* through a project's door: a quick fade to dark and back */
+.cube-world__fade {
+  position: absolute;
+  inset: 0;
+  z-index: 29;
+  pointer-events: none;
+  background: #05030b;
+  opacity: 0;
+  transition: opacity 240ms ease-out;
+}
+.cube-world__fade.is-on {
+  opacity: 1;
+  transition-duration: 220ms;
+  transition-timing-function: ease-in;
+}
+/* a project room's card: the project's own description and tools */
+.cube-world__room {
+  max-height: calc(100% - 9rem);
+  overflow-y: auto;
+}
+@media (max-width: 639px) {
+  /* The room rule follows the general card breakpoint rules, so cap it here
+     as well to keep a long description inside the phone viewport. */
+  .cube-world__room {
+    max-height: min(46dvh, calc(100dvh - max(1rem, env(safe-area-inset-top)) - max(1rem, env(safe-area-inset-bottom)) - 12rem));
+  }
+}
+.cube-world__room-text {
+  margin-top: 0.6rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: color-mix(in oklab, var(--foreground) 82%, transparent);
+}
+.cube-world__card .cube-world__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.7rem;
+}
+.cube-world__tags li {
+  border-radius: 9999px;
+  border: 1px solid color-mix(in oklab, var(--foreground) 14%, transparent);
+  padding: 0.1rem 0.55rem;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  color: var(--muted);
+}
+/* the live Evanston sky, under the hint */
+.cube-world__sky {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.cube-world__sky b {
+  color: var(--foreground);
+  font-weight: 600;
+}
+/* a skyline tower's date and count, on hover */
+.cube-world__tip {
+  display: block;
+  white-space: nowrap;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in oklab, var(--foreground) 14%, transparent);
+  background: color-mix(in oklab, var(--surface) 90%, transparent);
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  pointer-events: none;
+}
+.cube-world__tip b {
+  color: var(--foreground);
+  font-weight: 600;
+}
+/* a challenge's running clock, under the hint */
+.cube-world__timer {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--surface) 80%, transparent);
+  border: 1px solid color-mix(in oklab, var(--foreground) 14%, transparent);
+  padding: 0.3rem 0.75rem;
+  backdrop-filter: blur(8px);
+}
+.cube-world__timer:empty {
+  display: none;
+}
+.cube-world__corner {
+  display: flex;
+  gap: 0.4rem;
+  flex: none;
+}
+.cube-world__corner .cube-world__back[aria-pressed="true"],
+.cube-world__corner .cube-world__back[aria-expanded="true"] {
+  border-color: color-mix(in oklab, var(--accent) 48%, transparent);
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+}
+@media (max-width: 639px) {
+  /* on a phone they stack down the right edge, Exit first; Passport keeps its icon */
+  .cube-world__corner {
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  .cube-world__corner .cube-world__exit {
+    order: -1;
+  }
+  .cube-world__corner .cube-world__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+/* photo mode: everything but the picture and its own controls steps aside */
+.cube-world.is-photo :is(.cube-world__top, .cube-world__bar, .cube-world__act, .cube-world__card, .cube-world__toast, .cube-world__stick, .cube-world__pin-anchor) {
+  display: none;
+}
+.cube-world__tilt {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+.cube-world__tilt::before,
+.cube-world__tilt::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  height: 34%;
+  backdrop-filter: blur(3px);
+}
+.cube-world__tilt::before {
+  top: 0;
+  mask-image: linear-gradient(to bottom, #000, transparent);
+}
+.cube-world__tilt::after {
+  bottom: 0;
+  mask-image: linear-gradient(to top, #000, transparent);
+}
+.cube-world__photobar {
+  position: absolute;
+  z-index: 31;
+  left: 50%;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  width: max-content;
+  max-width: calc(100% - 2rem);
+}
+.cube-world__photobar .cube-world__hint {
+  max-width: none;
+  text-align: center;
+}
+.cube-world__photobar .cube-world__walkbar {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+/* the shutter: a quick white blink */
+.cube-world__flash.is-snap::after {
+  background: #ffffff;
+  transform: none;
+  animation: cube-world-snap 380ms ease-out forwards;
+}
+@keyframes cube-world-snap {
+  0% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+/* the passport: a taller card, stamps in rows */
+.cube-world__passport {
+  max-height: calc(100% - 9rem);
+  overflow-y: auto;
+}
+.cube-world__stamps {
+  margin-top: 0.9rem;
+}
+.cube-world__stamps h4 {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.cube-world__card .cube-world__stamps ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  margin-top: 0.4rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+.cube-world__stamps li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.cube-world__stamps li.is-got {
+  color: var(--foreground);
+}
+.cube-world__stamp {
+  display: inline-grid;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 9999px;
+  border: 1px dashed color-mix(in oklab, var(--foreground) 35%, transparent);
+}
+.is-got > .cube-world__stamp {
+  border: 0;
+  background: var(--stamp, #8b5cf6);
+  /* dark ink reads on every sticker colour, the white one included */
+  color: #0b0912;
+}
+
+/* ---- The hero cube's pill: the way into the world, always on show ------- */
+.cube-pill {
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  min-height: 2.25rem;
+  width: min(12rem, calc(100% - 1rem));
+  min-width: 0;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in oklab, var(--accent) 65%, transparent);
+  background: color-mix(in oklab, var(--background) 88%, var(--accent) 12%);
+  padding: 0 0.75rem;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--text-xs, 0.8125rem);
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  backdrop-filter: blur(6px);
+  transition: border-color 200ms, color 200ms, box-shadow 300ms;
+}
+/* small to look at, a full thumb's worth to tap */
+.cube-pill::after {
+  content: "";
+  position: absolute;
+  inset: -8px -4px;
+}
+/* both labels share one cell and crossfade */
+.cube-pill > span {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: opacity 180ms, transform 180ms;
+}
+.cube-pill__hover {
+  opacity: 0;
+  transform: translateY(3px);
+}
+.cube-pill__coarse {
+  display: none;
+}
+@media (pointer: coarse) {
+  .cube-pill__fine {
+    display: none;
+  }
+  .cube-pill__coarse {
+    display: inline;
+  }
+}
+.cube-pill:hover,
+.cube-pill:focus-visible {
+  color: var(--foreground);
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--background) 78%, var(--accent) 22%);
+}
+.cube-pill:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+/* hovering or focusing the cube itself: the pill tells you what that does */
+.cube-stage:has(> [role="button"]:hover) .cube-pill,
+.cube-stage:has(> [role="button"]:focus-visible) .cube-pill {
+  color: var(--foreground);
+  border-color: color-mix(in oklab, var(--accent) 70%, transparent);
+  box-shadow: 0 0 20px -6px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+.cube-stage:has(> [role="button"]:hover) .cube-pill__rest:has(+ .cube-pill__hover),
+.cube-stage:has(> [role="button"]:focus-visible) .cube-pill__rest:has(+ .cube-pill__hover) {
+  opacity: 0;
+  transform: translateY(-3px);
+}
+.cube-stage:has(> [role="button"]:hover) .cube-pill__hover,
+.cube-stage:has(> [role="button"]:focus-visible) .cube-pill__hover {
+  opacity: 1;
+  transform: none;
+}
+/* at rest it breathes, gently, so the eye finds it */
+@media (prefers-reduced-motion: no-preference) {
+  .cube-pill {
+    animation: cube-pill-breathe 3.2s ease-in-out infinite;
+  }
+}
+@keyframes cube-pill-breathe {
+  50% {
+    border-color: color-mix(in oklab, var(--accent) 65%, transparent);
+  }
+}
+/* the sky-boat's exit: the edges close in as it falls into the hole, then a
+   flash of light swells from the centre and the cube closes */
+.cube-world__flash {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 0 #05030b;
+  transition: box-shadow 1.3s cubic-bezier(0.55, 0, 0.9, 0.4);
+}
+.cube-world__flash.is-warp {
+  box-shadow: inset 0 0 22vmin 14vmin #05030b;
+}
+.cube-world__flash::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: scale(0.2);
+  background: radial-gradient(circle at 50% 50%, #ffffff 0%, #ede9fe 22%, #a78bfa 48%, transparent 72%);
+}
+.cube-world__flash.is-on::after {
+  animation: cube-world-flash 520ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+@keyframes cube-world-flash {
+  0% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  40% {
+    opacity: 0.32;
+  }
+  100% {
+    opacity: 0.32;
+    transform: scale(3);
+  }
+}
+/* playing a cabinet in the walk-in arcade: the camera's at its screen; this sits to the side */
+.cube-arcade-hud {
+  position: absolute;
+  z-index: 33;
+  right: 1rem;
+  bottom: calc(max(1rem, env(safe-area-inset-bottom)) + 4rem);
+  width: min(16rem, calc(100% - 2rem));
+}
+
+/* Cabinet controls stay available to mouse, touch and keyboard players. */
+.cube-arcade-hud__hint { margin-top: 0.35rem; color: var(--muted); font-size: var(--text-xs, 0.8125rem); }
+.cube-arcade-hud__pad { display: grid; grid-template-columns: repeat(4, 48px); grid-template-rows: 48px; justify-content: start; gap: 0.3rem; }
+.cube-arcade-hud__pad .is-up { grid-area: 1 / 2; }
+.cube-arcade-hud__pad .is-left { grid-area: 1 / 1; }
+.cube-arcade-hud__pad .is-down { grid-area: 1 / 2; }
+.cube-arcade-hud__pad .is-right { grid-area: 1 / 3; }
+.cube-arcade-hud__pad .is-action { grid-area: 1 / 4; }
+.cube-arcade-hud__pad.has-up { grid-template-rows: repeat(2, 48px); }
+.cube-arcade-hud__pad.has-up .is-left { grid-row: 2; }
+.cube-arcade-hud__pad.has-up .is-down { grid-row: 2; }
+.cube-arcade-hud__pad.has-up .is-right { grid-row: 2; }
+.cube-arcade-hud__pad.has-up .is-action { grid-row: 2; }
+.cube-arcade-hud__pad button:disabled { opacity: 0.45; }
+.cube-arcade-hud__pad button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.cube-arcade-hud__pad button:active:not(:disabled) { background: var(--accent); color: var(--background); }
+
+/* ======================================================================
+   Contact: the paper plane. A note on paper that folds into a plane while the
+   message is on its way, flies off once the server confirms, and unfolds again
+   if it fails. The sheet takes the theme: night paper with lavender ink after
+   dark, white paper with indigo ink in the light.
+   ====================================================================== */
+.ct {
+  --paper: color-mix(in oklab, var(--surface) 86%, var(--accent));
+  --ink: color-mix(in oklab, var(--foreground) 92%, var(--accent));
+  --rule: color-mix(in oklab, var(--accent) 30%, transparent);
+  --paper-mute: var(--muted);
+  --pen: var(--accent);
+  --pen-fg: var(--accent-fg);
+  --field: color-mix(in oklab, var(--accent) 7%, transparent);
+  --ct-err: #ff9b92;
+  --ct-err-line: rgba(255, 155, 146, 0.45);
+  --ct-warn: #f5c26b;
+  --ct-shadow: rgba(0, 0, 0, 0.5);
+  --ct-glow: rgba(167, 139, 250, 0.16);
+  /* the folded plane is bright paper in either theme, so it reads against the page */
+  --plane: #efeaff;
+  --plane-shade: rgba(60, 30, 140, 0.2);
+  --plane-glow: color-mix(in oklab, var(--accent) 55%, transparent);
+  --hand: "Bradley Hand", "Segoe Print", "Chalkboard SE", "Comic Neue", "Comic Sans MS", cursive;
+}
+.ct__intro { position: relative; }
+/* a small plane crossing the header, now and then */
+.ct__glider {
+  position: absolute; top: 0.4rem; left: -3rem;
+  color: color-mix(in oklab, var(--accent) 70%, var(--foreground));
+  opacity: 0; pointer-events: none;
+  animation: ct-glide 22s linear 3s infinite;
+}
+@keyframes ct-glide {
+  0% { left: -3rem; transform: translateY(0) rotate(4deg); opacity: 0; }
+  4% { opacity: 0.8; }
+  25% { transform: translateY(-10px) rotate(-6deg); }
+  50% { transform: translateY(6px) rotate(3deg); }
+  75% { transform: translateY(-8px) rotate(-5deg); }
+  92% { opacity: 0.8; }
+  100% { left: 100%; transform: translateY(0) rotate(0deg); opacity: 0; }
+}
+
+/* the stage holds the sheet (and keeps its place in the layout while it folds and flies) */
+.ct__stage {
+  position: relative;
+  filter: drop-shadow(0 26px 28px var(--ct-shadow)) drop-shadow(0 0 40px var(--ct-glow));
+  transition: filter 0.7s var(--ease-out);
+}
+.ct__stage:has(.is-folding) { filter: drop-shadow(0 14px 14px var(--ct-shadow)) drop-shadow(0 0 26px var(--plane-glow)); }
+:root[data-theme="light"] .ct {
+  --paper: #ffffff;
+  --ink: #1d1747;
+  --rule: #d9d3ee;
+  --field: rgba(91, 47, 224, 0.06);
+  --ct-err: #b42318;
+  --ct-err-line: #e5b4ae;
+  --ct-warn: #8a4b00;
+  --ct-shadow: rgba(40, 30, 90, 0.16);
+  --ct-glow: rgba(91, 47, 224, 0.1);
+  --plane: #6a43f0;
+  --plane-shade: rgba(20, 8, 70, 0.28);
+  --plane-glow: rgba(91, 47, 224, 0.35);
+}
+.ct__panel { border: 1px solid var(--rule); }
+.ct__panel {
+  background: var(--paper);
+  color: var(--ink);
+  border: 0;
+  border-radius: 6px;
+  padding: clamp(1.4rem, 3.4vw, 2.4rem);
+  gap: 0;
+  transform: rotate(-0.8deg);
+  transform-origin: 50% 50%;
+  clip-path: polygon(0 0, 50% 0, 100% 0, 100% 50%, 100% 100%, 50% 100%, 0 100%, 0 50%);
+  position: relative;
+  transition:
+    clip-path 0.72s cubic-bezier(0.77, 0, 0.175, 1) 0.1s,
+    transform 0.72s cubic-bezier(0.77, 0, 0.175, 1) 0.1s,
+    background-color 0.5s ease 0.1s;
+  /* backwards, not both: once it has landed, the fold and the flight are free to move it */
+  animation: ct-land 0.8s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+@keyframes ct-land {
+  from { opacity: 0; transform: translateY(26px) rotate(2.4deg); }
+  to { opacity: 1; transform: translateY(0) rotate(-0.8deg); }
+}
+.ct__sheet { display: flex; flex-direction: column; gap: 1.5rem; transition: opacity 0.22s ease; }
+.ct__dear { font-family: var(--hand); font-size: 1.75rem; line-height: 1.1; color: var(--ink); margin: 0; }
+
+/* fields are pen on paper: a ruled line, not a box */
+.ct .ct__label { font-family: var(--font-mono), monospace; font-size: var(--text-2xs); letter-spacing: 0.1em; text-transform: uppercase; color: var(--paper-mute); font-weight: 500; }
+.ct .ct__input,
+.ct .ct__textarea {
+  color: var(--ink);
+  border: 0;
+  border-bottom: 1.5px solid color-mix(in oklab, var(--accent) 45%, transparent);
+  border-radius: 0;
+  padding: 0.3rem 0.5rem;
+  background-color: var(--field);
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+  font-family: var(--hand);
+  font-size: 1.3rem;
+  line-height: 2rem;
+  box-shadow: none;
+}
+.ct .ct__input { min-height: 2.75rem; }
+.ct .ct__textarea {
+  min-height: 9.5rem;
+  padding-top: 0;
+  resize: vertical;
+  background-color: transparent;
+  background-image: repeating-linear-gradient(to bottom, transparent 0 calc(2rem - 1.5px), var(--rule) calc(2rem - 1.5px) 2rem);
+  background-attachment: local;
+  border-bottom-color: transparent;
+}
+.ct .ct__input::placeholder,
+.ct .ct__textarea::placeholder { color: color-mix(in oklab, var(--paper-mute) 78%, transparent); font-family: var(--hand); opacity: 1; }
+.ct .ct__input:hover { background-color: color-mix(in oklab, var(--accent) 11%, transparent); }
+.ct .ct__input:focus,
+.ct .ct__textarea:focus { outline: none; border-bottom-color: var(--pen); box-shadow: 0 2px 0 0 var(--pen); }
+.ct .ct__input:focus { background-color: color-mix(in oklab, var(--accent) 13%, transparent); }
+.ct .ct__textarea:focus { box-shadow: none; }
+.ct .ct__input:focus-visible,
+.ct .ct__textarea:focus-visible { outline: 2px solid var(--pen); outline-offset: 4px; border-radius: 3px; }
+.ct .ct__input[aria-invalid="true"], .ct .ct__textarea[aria-invalid="true"] { border-bottom-color: var(--ct-err); }
+.ct .ct__field-error { color: var(--ct-err); }
+.ct .ct__count { color: var(--paper-mute); }
+.ct .ct__count.is-near { color: var(--ct-warn); }
+.ct .ct__count.is-over { color: var(--ct-err); }
+.ct .ct__note { color: var(--paper-mute); }
+.ct .ct__error { background: transparent; border-color: var(--ct-err-line); color: var(--ink); }
+.ct .ct__error-title { color: var(--ct-err); }
+.ct .ct__error-link { color: var(--pen); }
+.ct .ct__submit { background: var(--pen); color: var(--pen-fg); border-radius: 9999px; font-weight: 600; }
+.ct .ct__submit:hover:not(:disabled) { background: color-mix(in oklab, var(--pen) 86%, var(--foreground)); }
+.ct .ct__submit:focus-visible { outline: 2px solid var(--pen); outline-offset: 3px; }
+
+/* the plane: while it waits on the server, the sheet is folded into a dart.
+   It folds toward the button that was pressed (transform-origin is set from JS),
+   turns bright paper so it reads on the page, and a crease shades the lower wing. */
+.ct__panel.is-folding {
+  clip-path: polygon(0% 12%, 45% 30%, 100% 50%, 100% 50%, 100% 50%, 45% 70%, 0% 88%, 20% 50%);
+  transform: rotate(-7deg) scale(0.3, 0.2);
+  background-color: var(--plane);
+  border-color: transparent;
+}
+.ct__panel::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(180deg, transparent 50%, var(--plane-shade) 50%);
+  opacity: 0; transition: opacity 0.35s ease 0.35s;
+}
+.ct__panel.is-folding::before { opacity: 1; }
+/* the sheet's words fade as the creases start, so there's never a blank rectangle */
+.ct__panel.is-folding .ct__sheet { opacity: 0; transition-duration: 0.16s; transition-delay: 0s; }
+/* hovering while the server thinks: a slow bob on the separate `translate` property */
+.ct__panel.is-hovering { animation: ct-bob 2.4s ease-in-out infinite; }
+@keyframes ct-bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -9px; } }
+/* takeoff is driven from JS (WAAPI along one measured path); this only stops the bob */
+.ct__panel.is-flying { animation: none; }
+/* it couldn't be delivered: it unfolds, then gives a small bonk */
+.ct__panel.is-bonk { animation: ct-bonk 0.5s ease-out 0.75s both; }
+@keyframes ct-bonk { 0%, 100% { translate: 0 0; } 20% { translate: -9px 0; } 45% { translate: 7px 0; } 70% { translate: -4px 0; } }
+/* stardust left along the flight path (a portal on <body>, positioned in viewport px) */
+.ct__dust { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 60; overflow: visible; }
+.ct__dust circle { fill: var(--accent); opacity: 0; transform-box: fill-box; transform-origin: center; animation: ct-dust 0.9s var(--ease-out) both; }
+.ct__dust circle.is-alt { fill: color-mix(in oklab, var(--accent) 45%, #38bdf8); }
+@keyframes ct-dust { 0% { opacity: 0; transform: scale(0.3); } 18% { opacity: 0.95; transform: scale(1); } 100% { opacity: 0; transform: translate(-8px, 12px) scale(0.4); } }
+/* what the folded plane is doing while it waits (sits under the dart, in the stage) */
+.ct__waiting {
+  position: absolute; left: 50%; top: 58%; transform: translateX(-50%); white-space: nowrap; pointer-events: none;
+  font-size: var(--text-xs); letter-spacing: 0.04em; color: var(--foreground);
+  animation: ct-wait 1.6s ease-in-out infinite;
+}
+@keyframes ct-wait { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+
+/* the note signs itself as you type your name */
+.ct__sign { font-family: var(--hand); font-size: 1.35rem; color: var(--ink); margin: -0.5rem 0 0; text-align: right; opacity: 0.9; overflow-wrap: anywhere; }
+.ct__panel:focus { outline: none; }
+.ct__done-title:focus { outline: none; }
+.ct .ct__send-icon { display: inline-block; margin-left: 0.5rem; vertical-align: -1px; }
+.ct .ct__submit { transition: background-color 0.18s ease, transform 0.16s var(--ease-out); }
+.ct .ct__submit:active:not(:disabled) { transform: scale(0.97); }
+
+/* reduced motion: no folding or flying; the note just rests until the answer comes */
+.ct--static .ct__glider, .ct--static .ct__dust { display: none; }
+.ct--static .ct__panel { animation: none; transition: none; }
+.ct--static .ct__panel.is-folding { clip-path: none; transform: rotate(-0.8deg); }
+.ct--static .ct__panel.is-folding .ct__sheet { opacity: 0.45; }
+.ct--static .ct__waiting { position: static; transform: none; animation: none; margin-top: 0.75rem; }
+.ct--static .ct__panel.is-hovering, .ct--static .ct__panel.is-bonk { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .ct__glider, .ct__dust { display: none; }
+  .ct__panel, .ct__panel.is-flying, .ct__panel.is-hovering, .ct__panel.is-bonk { animation: none; transition: none; }
+  .ct__panel.is-folding { clip-path: none; transform: rotate(-0.8deg); }
+  .ct__panel.is-folding .ct__sheet { opacity: 0.45; }
+  .ct__waiting { animation: none; }
+}
+.ct .ct__hint { text-transform: none; letter-spacing: 0; font-family: var(--font-sans), sans-serif; opacity: 0.9; }
+
+/* ======================================================================
+   Contact, light: "the note on the desk". The sheet is white notepaper lifted off
+   the lavender canvas by a violet-tinted shadow and a hairline edge; the success
+   card is a second sheet with the receipt as a printed slip. Scoped to light so
+   night is untouched.
+   ====================================================================== */
+:root[data-theme="light"] .ct .ct__panel { border-color: color-mix(in oklab, var(--foreground) 12%, transparent); }
+:root[data-theme="light"] .ct .ct__input::placeholder,
+:root[data-theme="light"] .ct .ct__textarea::placeholder { color: var(--muted); }
+:root[data-theme="light"] .ct .ct__input { border-bottom-color: color-mix(in oklab, var(--accent) 60%, transparent); }
+:root[data-theme="light"] .ct .ct__waiting { color: var(--accent); }
+:root[data-theme="light"] .ct .ct__glider { color: color-mix(in oklab, var(--accent) 60%, var(--background)); }
+:root[data-theme="light"] .ct .ct__error { background: color-mix(in oklab, var(--ct-err) 6%, #fff); border-color: color-mix(in oklab, var(--ct-err) 45%, transparent); }
+:root[data-theme="light"] .ct .ct__done {
+  background: #fff;
+  border: 1px solid color-mix(in oklab, var(--foreground) 12%, transparent);
+  box-shadow: 0 1px 2px rgba(26, 18, 64, 0.14), 0 22px 40px -18px rgba(26, 18, 64, 0.28);
+}
+:root[data-theme="light"] .ct .ct__done-mark { background: color-mix(in oklab, var(--accent) 12%, #fff); }
+:root[data-theme="light"] .ct .ct__receipt {
+  background: color-mix(in oklab, var(--accent) 6%, #fff);
+  border-color: color-mix(in oklab, var(--accent) 22%, transparent);
+  color: var(--foreground);
+}
+:root[data-theme="light"] .ct .ct__receipt-prompt { color: var(--accent); }
+:root[data-theme="light"] .ct .ct__btn { background: #fff; border-color: color-mix(in oklab, var(--foreground) 22%, transparent); color: var(--foreground); }
+:root[data-theme="light"] .ct .ct__btn:hover { border-color: color-mix(in oklab, var(--accent) 60%, transparent); }
+/* the ↗ on an Elsewhere row shows for keyboard focus too, not only hover */
+.ct__link:focus-visible .ct__link-open { opacity: 1; }
+@keyframes ct-wait { 0%, 100% { opacity: 0.75; } 50% { opacity: 1; } }
+
+/* ======================================================================
+   Résumé, light: the printed sheet on lavender newsprint. One crisp white page
+   with a violet-tinted shadow, firmer rules, and a short accent tick on each
+   section heading. Scoped to light; the print block already flattens all of it.
+   ====================================================================== */
+:root[data-theme="light"] .rez__sheet {
+  background: #fff;
+  border-color: color-mix(in oklab, var(--foreground) 12%, transparent);
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 2px rgba(26, 18, 64, 0.12), 0 24px 44px -22px rgba(26, 18, 64, 0.3);
+}
+:root[data-theme="light"] .rez__block-h {
+  position: relative;
+  border-bottom-color: color-mix(in oklab, var(--foreground) 18%, transparent);
+}
+:root[data-theme="light"] .rez__block-h::after {
+  content: ""; position: absolute; left: 0; bottom: -1px; width: 2rem; height: 2px; background: var(--accent);
+}
+:root[data-theme="light"] .rez__foot { border-top-color: color-mix(in oklab, var(--foreground) 18%, transparent); }
+:root[data-theme="light"] .rez__bullets li::before { color: color-mix(in oklab, var(--foreground) 38%, transparent); }
+:root[data-theme="light"] .rez__meta-sep { color: color-mix(in oklab, var(--foreground) 38%, transparent); }
+:root[data-theme="light"] .rez__btn { background: #fff; }
+:root[data-theme="light"] .rez__btn:hover { border-color: color-mix(in oklab, var(--accent) 65%, transparent); }
+:root[data-theme="light"] .rez__btn--primary { background: var(--foreground); box-shadow: 0 8px 20px -10px rgba(26, 18, 64, 0.45); }
+:root[data-theme="light"] .rez__dock { box-shadow: 0 10px 24px -10px rgba(26, 18, 64, 0.5); }
+:root[data-theme="light"] .rez__entry-link { text-decoration-color: color-mix(in oklab, var(--accent) 70%, transparent); text-decoration-thickness: 1.5px; }
+:root[data-theme="light"] .rez__entry-link:hover { text-decoration-color: var(--accent); text-decoration-thickness: 2px; }
+
+/* ======================================================================
+   Experience, light: "the printed commit log". Nothing glows; hierarchy is ink
+   weight. Solid ink lanes (deepened to hold 3:1 even idle), stamped commit-dot
+   nodes with a paper ring, an ink HEAD tag, ruled year dividers, an ink-ramp
+   heatmap. Scoped to light; night is untouched.
+   ====================================================================== */
+:root[data-theme="light"] .xp {
+  --lane-0: oklch(0.5 0.2 293);
+  --lane-1: oklch(0.5 0.14 240);
+  --lane-2: oklch(0.48 0.19 305);
+  --lane-3: oklch(0.5 0.11 195);
+  --lane-4: oklch(0.46 0.18 265);
+  --lane-5: oklch(0.5 0.18 335);
+}
+:root[data-theme="light"] .xp__lane { opacity: 0.85; stroke-width: 1.9; }
+:root[data-theme="light"] .xp__lane--main { opacity: 1; stroke-width: 2.4; }
+/* the branch being read: heavier, with a print-style offset instead of a glow */
+:root[data-theme="light"] .xp__lane.is-active {
+  opacity: 1; stroke-width: 3;
+  filter: drop-shadow(1px 1px 0 color-mix(in oklab, var(--shade) 25%, transparent));
+}
+:root[data-theme="light"] .xp__tip { opacity: 0.9; }
+/* nodes: stamped dots. past = solid ink with a paper ring; ahead = open ring */
+:root[data-theme="light"] .xp__node { border: 1.5px solid color-mix(in oklab, var(--foreground) 45%, transparent); background: var(--background); }
+:root[data-theme="light"] .xp__item.is-past .xp__node,
+:root[data-theme="light"] .xp__node.is-current {
+  background: var(--lane-color, var(--accent));
+  border-color: var(--background);
+  box-shadow: 0 0 0 1px var(--lane-color, var(--accent));
+}
+:root[data-theme="light"] .xp__item.is-active .xp__node,
+:root[data-theme="light"] .xp__item.is-active .xp__node.is-current {
+  background: var(--lane-color, var(--accent));
+  border-color: var(--background);
+  box-shadow: 0 0 0 1.5px var(--lane-color, var(--accent)), 0 0 0 4px var(--background), 0 0 0 5.5px var(--lane-color, var(--accent));
+}
+:root[data-theme="light"] .xp__node:hover { border-color: var(--background); box-shadow: 0 0 0 1.5px var(--accent); }
+/* HEAD: an ink tag, like the primary button */
+:root[data-theme="light"] .xp__headref-tag { background: var(--foreground); color: var(--background); border-color: var(--foreground); }
+:root[data-theme="light"] .xp__now { border-color: color-mix(in oklab, var(--accent) 85%, transparent); }
+/* year dividers: a ruled ledger line, not a fade */
+:root[data-theme="light"] .xp__year { color: var(--foreground); }
+:root[data-theme="light"] .xp__year::after { background: color-mix(in oklab, var(--foreground) 28%, transparent); }
+/* fold controls read as controls: dotted ink underline, accent on hover/focus */
+:root[data-theme="light"] .xp__fold,
+:root[data-theme="light"] .xp__foldall { text-decoration-style: dotted; text-decoration-thickness: 1.5px; text-decoration-color: color-mix(in oklab, var(--foreground) 55%, transparent); }
+:root[data-theme="light"] .xp__fold:hover,
+:root[data-theme="light"] .xp__foldall:hover { color: var(--accent); text-decoration-color: var(--accent); }
+/* heatmap: an ink ramp on a white plate; empty days keep a visible outline */
+:root[data-theme="light"] .heat__frame { background: #fff; border-color: color-mix(in oklab, var(--foreground) 14%, transparent); }
+:root[data-theme="light"] .heat__cell--0 { fill: color-mix(in oklab, var(--foreground) 6%, #fff); stroke: color-mix(in oklab, var(--foreground) 14%, transparent); stroke-width: 0.5px; background: color-mix(in oklab, var(--foreground) 6%, #fff); box-shadow: inset 0 0 0 0.5px color-mix(in oklab, var(--foreground) 14%, transparent); }
+:root[data-theme="light"] .heat__cell--1 { fill: color-mix(in oklab, var(--accent) 24%, #fff); background: color-mix(in oklab, var(--accent) 24%, #fff); }
+:root[data-theme="light"] .heat__cell--2 { fill: color-mix(in oklab, var(--accent) 50%, #fff); background: color-mix(in oklab, var(--accent) 50%, #fff); }
+:root[data-theme="light"] .heat__cell--3 { fill: color-mix(in oklab, var(--accent) 75%, #fff); background: color-mix(in oklab, var(--accent) 75%, #fff); }
+
+/* ======================================================================
+   Skills, light: "the printed star chart". The wheel's lines, dust and links are
+   re-inked in SkillsWheelGL (day palette); here the HTML half follows: medallions
+   are white discs with a framed edge, logos keep their own colours (the night-only
+   invert/lift filters are off), and brand colours used as small ink are deepened
+   so they hold on paper. Scoped to light; night is untouched.
+   ====================================================================== */
+:root[data-theme="light"] .sk-wheel,
+:root[data-theme="light"] .sk {
+  --brand-ink: color-mix(in oklab, var(--brand, var(--accent)) 62%, #1a1240);
+}
+:root[data-theme="light"] .sk-medal { background: var(--surface); }
+:root[data-theme="light"] .sk-medal__live { box-shadow: 0 0 0 2px var(--surface); background: var(--status-live); }
+:root[data-theme="light"] .sk-medal.is-selected .sk-medal__frame circle { stroke: var(--brand-ink); }
+:root[data-theme="light"] .sk-medal.is-selected .sk-medal__frame rect { fill: var(--brand-ink); }
+:root[data-theme="light"] .sk-medal__name { background: color-mix(in oklab, var(--surface) 88%, transparent); }
+:root[data-theme="light"] .sk__row-icon[data-invert] svg,
+:root[data-theme="light"] .sk__card-icon[data-invert] svg,
+:root[data-theme="light"] .sk__row-icon[data-lift] svg,
+:root[data-theme="light"] .sk__card-icon[data-lift] svg { filter: none; }
+:root[data-theme="light"] .sk__glyph { color: var(--brand-ink); }
+:root[data-theme="light"] .sk__glyph[data-len="long"] { border-color: color-mix(in oklab, var(--brand-ink) 60%, transparent); }
+/* pale brand logos (React cyan, Vite, Tailwind…) are deepened a step on paper; hue is kept */
+:root[data-theme="light"] .sk__row-icon svg,
+:root[data-theme="light"] .sk__card-icon svg { filter: saturate(1.15) brightness(0.8); }
+:root[data-theme="light"] .sk__card-icon { background: #fff; border: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent); }
