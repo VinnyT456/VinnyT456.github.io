@@ -74,8 +74,8 @@ function buildSteps(): Step[] {
     });
   }
 
-  // Order is the site's own: museum.ts pins the flagship first and says so.
-  const flagship = exhibits[0];
+  // The flagship is named, not "first in the list": the list is in date order.
+  const flagship = exhibits.find((e) => e.id === "Genshin Combat Optimizer") ?? exhibits[0];
   if (flagship) {
     steps.push({
       id: "project",

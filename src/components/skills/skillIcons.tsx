@@ -28,6 +28,10 @@ import JunitOriginal from "devicons-react/icons/JunitOriginal";
 import CucumberPlain from "devicons-react/icons/CucumberPlain";
 import GitOriginal from "devicons-react/icons/GitOriginal";
 import VercelOriginal from "devicons-react/icons/VercelOriginal";
+import RustOriginal from "devicons-react/icons/RustOriginal";
+import SvelteOriginal from "devicons-react/icons/SvelteOriginal";
+import TauriOriginal from "devicons-react/icons/TauriOriginal";
+import PlaywrightOriginal from "devicons-react/icons/PlaywrightOriginal";
 
 type IconProps = { size?: number | string; className?: string };
 type IconType = ComponentType<IconProps>;
@@ -66,6 +70,10 @@ export const skillIcons: Record<string, IconType> = {
   cucumber: CucumberPlain,
   git: GitOriginal,
   vercel: VercelOriginal,
+  rust: RustOriginal,
+  svelte: SvelteOriginal,
+  tauri: TauriOriginal,
+  playwright: PlaywrightOriginal,
 };
 
 /** Gemini's four-point mark — no devicon exists for it, so it's drawn here. */
@@ -95,7 +103,7 @@ export const skillGlyphs: Record<string, string> = {
 
 /** Logos drawn in solid black — flipped to light so they read on the dark
  *  cabinet instead of disappearing into it. */
-export const invertedIcons = new Set(["threejs", "vercel"]);
+export const invertedIcons = new Set(["threejs", "vercel", "rust"]);
 
 /** Dark-but-coloured logos — brightened rather than inverted. */
 export const liftedIcons = new Set(["pandas"]);

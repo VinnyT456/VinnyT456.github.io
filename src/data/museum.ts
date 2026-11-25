@@ -125,9 +125,7 @@ function stations(
 }
 
 // --- Exhibits -------------------------------------------------------------
-// Real projects from github.com/VinnyT456, newest first — except Genshin
-// Combat Optimizer, pinned first as the flagship (the most substantial build:
-// the one a visitor should meet before anything else). Copy is written from each
+// Real projects from github.com/VinnyT456 (plus Earth Jukebox, a team project), newest first. Copy is written from each
 // repo's README and dependency files; a station is left out where the repo
 // doesn't support a claim (no invented results). Finance Job Dashboard and
 // Treasure Hunt have no public repo — their copy comes from the live apps;
@@ -153,6 +151,157 @@ export function exhibitSlug(e: Pick<Exhibit, "id">): string {
 const site0 = site.projects[0];
 
 export const exhibits: Exhibit[] = [
+  {
+    id: "CAESAR Course Check",
+    repo: "Caesar-Course-Check",
+    title: "CAESAR Course Check",
+    year: "2026",
+    category: "Desktop · Automation",
+    description:
+      "A menu-bar and system-tray app that watches a Northwestern CAESAR class and alerts you the moment a seat opens.",
+    technologies: ["Python", "FastAPI", "Playwright", "Svelte", "Vite", "PyInstaller"],
+    href: "https://github.com/VinnyT456/Caesar-Course-Check",
+    video: "/projects/demos/caesar_course_check",
+    exhibitType: "holographic_display",
+    theme: { accent: "#9dd0b0", art: "grid", icon: "phone" },
+    technical: {
+      facts: [
+        { label: "Checker", value: "Async Playwright in headless Chrome" },
+        { label: "Server", value: "FastAPI" },
+        { label: "UI", value: "Svelte and Vite" },
+        { label: "Platforms", value: "macOS menu bar, Windows window" },
+        { label: "Packaging", value: "PyInstaller, GitHub Actions" },
+      ],
+      highlights: [
+        "Checks about once a minute and watches up to five classes at once.",
+        "There is no CAESAR login, only a captcha, and the app never solves it for you: you solve it by hand and monitoring resumes.",
+        "Alert when any seat opens or below a number you set, with quiet hours, an enrollment graph and the waitlist count when CAESAR shows it.",
+        "The course dropdowns come from a catalog scraped from Northwestern's class descriptions.",
+      ],
+    },
+    stations: stations({
+      problem:
+        "A full class can open a seat at any time, and refreshing the registration page by hand is the only other way to find out.",
+      approach:
+        "Let a small app watch the class and alert you, then hand you straight to CAESAR to enroll yourself.",
+      build:
+        "A Python and FastAPI backend drives Playwright in a headless Chrome to read enrollment, with a Svelte UI served inside a native shell: a menu-bar app on macOS and a window on Windows. PyInstaller packages it into a .dmg and .exe.",
+    }),
+  },
+  {
+    // A team project (built with a teammate for the NASA Space Apps Challenge; the web app and the trained VAE pipeline are Vincent's),
+    // so there is no `repo`: live stats only exist for repos under github.com/VinnyT456.
+    id: "Earth Jukebox",
+    video: "/projects/demos/earth_jukebox",
+    title: "Earth Jukebox",
+    year: "2026",
+    category: "Web · Hackathon · ML",
+    description:
+      "A NASA Space Apps Challenge project built with a teammate: a variational autoencoder splits a NASA hurricane animation into frames, learns a latent vector for each, and turns how they change into five styles of music, played in step with the footage. I built the web app and trained the VAE pipeline.",
+    technologies: ["Python", "PyTorch", "FastAPI", "TypeScript", "Next.js"],
+    href: "https://github.com/kanaghasivakumar/The-Earth-Information-Jukebox-NASA-Space-Apps-Hackathon",
+    exhibitType: "holographic_display",
+    theme: { accent: "#7cc4e8", art: "signal", icon: "chart" },
+    technical: {
+      facts: [
+        { label: "My part", value: "The web app and the trained VAE pipeline" },
+        { label: "Model", value: "Variational autoencoder on the animation's frames" },
+        { label: "Output", value: "Ambient, cinematic, classical, jazz and electronic" },
+        { label: "Backend", value: "Python, PyTorch and FastAPI" },
+        { label: "Front end", value: "Next.js" },
+        { label: "Source", value: "NASA SVS 5097, Hurricane Ian (2022)" },
+        { label: "Live site", value: "the-earth-information-jukebox-nasa.vercel.app" },
+      ],
+      highlights: [
+        "Plays the music in step with the footage, shows how a picture becomes music, and lets you upload your own Earth visualization.",
+        "An artistic sonification, not a forecast: the model's eight numbers are learned patterns, not temperature, rainfall or wind.",
+        "Independent work, not endorsed by NASA; animation credit to NASA/Goddard Space Flight Center Scientific Visualization Studio.",
+      ],
+    },
+    stations: stations({
+      problem:
+        "A hurricane season is usually something you look at. This asks what it would sound like.",
+      approach:
+        "Split the video into frames, learn a compact latent vector for each, then let how those vectors change drive the music.",
+      build:
+        "The pipeline splits the video into frames, a variational autoencoder I trained encodes each frame as a latent vector, and a composer with five styles turns those into music. I also built the Next.js web app that plays it alongside the footage; the bundled hurricane season plays without the FastAPI server, which only the upload page needs.",
+    }),
+  },
+  {
+    id: "Flight Watch",
+    repo: "priceline-ticket-checker",
+    title: "Flight Watch",
+    year: "2026",
+    category: "Desktop · Menu-bar app",
+    description:
+      "A menu-bar app that watches flight prices for you. It checks Priceline every three hours, tracks up to four date windows at once, ranks the results by price, time, duration or airline, and pops up over full-screen apps when there's something to see.",
+    technologies: ["Tauri", "Rust", "React", "JavaScript"],
+    href: "https://github.com/VinnyT456/priceline-ticket-checker",
+    video: "/projects/demos/flight_watch",
+    exhibitType: "holographic_display",
+    theme: { accent: "#8fb4f0", art: "graph", icon: "chart" },
+    technical: {
+      facts: [
+        { label: "Shell", value: "Tauri, with a Rust backend" },
+        { label: "UI", value: "React" },
+        { label: "Data", value: "Priceline.com Provider API (RapidAPI)" },
+        { label: "Platforms", value: "macOS and Windows" },
+        { label: "Tests", value: "Rust parser tests on real captured responses" },
+        { label: "Note", value: "Independent; not affiliated with Priceline" },
+      ],
+      highlights: [
+        "Checks every 3 hours: about 240 API calls a month per trip, so the free 500-call plan covers two trips.",
+        "Watches up to four date windows in parallel, each with its own tab and best price.",
+        "Sorting and filtering by price, departure, duration, airline or stops run instantly, with no extra API calls.",
+        "Your API key and settings stay on your computer; the only network traffic is the Priceline API.",
+      ],
+    },
+    stations: stations({
+      problem:
+        "Fares move through the day, and watching a few date windows by hand means refreshing the same search again and again.",
+      approach:
+        "A tiny menu-bar app that does the checking on a schedule and comes forward when there's something to look at.",
+      build:
+        "A Tauri app. The Rust backend runs the scheduler, calls the Priceline provider API, parses the responses and manages the popover window; a React UI ranks and filters what it returns. macOS gets a dark departure-board look and Windows a light boarding-pass look.",
+    }),
+  },
+  {
+    id: "Teyvat Lexicon",
+    repo: "genshin-translator-bot",
+    title: "Teyvat Lexicon",
+    year: "2026",
+    category: "Desktop · Local AI",
+    description:
+      "A cross-platform Genshin Impact translator that runs on a local AI model. It pairs each translation with ranked glossary matches, takes speech input, and reads the result back.",
+    technologies: ["Tauri", "Rust", "React", "Vite", "TypeScript", "Python", "FastAPI"],
+    href: "https://github.com/VinnyT456/genshin-translator-bot",
+    video: "/projects/demos/teyvat_lexicon",
+    exhibitType: "holographic_display",
+    theme: { accent: "#d9a8e8", art: "signal", icon: "graph" },
+    technical: {
+      facts: [
+        { label: "Model", value: "Local OpenAI-compatible server (default Gemma 4 E2B GGUF)" },
+        { label: "Glossary", value: "Genshin Dictionary dataset" },
+        { label: "Search", value: "Exact matches first, semantic fallback (ChromaDB)" },
+        { label: "Speech", value: "Whisper base in, Kokoro-82M out" },
+        { label: "Shell", value: "Tauri, React and Vite; FastAPI service" },
+      ],
+      highlights: [
+        "Translates into English, Japanese, Simplified or Traditional Chinese, with automatic source detection or an explicit Russian source.",
+        "Shows exact glossary matches first and falls back to semantic matches; both stream into the app as they arrive.",
+        "Speak a snippet and hear the translation, with Japanese romaji or Chinese pinyin on request.",
+        "Quick Translate on ⌘/Ctrl + Shift + Space. Preferences and favorites stay local; translation history is never saved.",
+      ],
+    },
+    stations: stations({
+      problem:
+        "Game text is full of proper nouns and terminology that a general translator can mangle.",
+      approach:
+        "Pair a local language model with the game's own glossary, and show the glossary matches next to the translation so they can be checked.",
+      build:
+        "A Tauri and React desktop app talks to a local FastAPI service that handles translation, glossary retrieval, speech recognition and text-to-speech. The model runs on a local OpenAI-compatible server, so no API key is needed.",
+    }),
+  },
   {
     id: "Genshin Combat Optimizer",
     repo: "Genshin-Combat-Optimizer",

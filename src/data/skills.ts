@@ -109,6 +109,18 @@ export const skills: Skill[] = [
     match: ["TypeScript"],
   },
   {
+    id: "rust",
+    name: "Rust",
+    category: "Languages",
+    brandColor: "#DEA584",
+    description:
+      "The backend of my Tauri desktop apps: Flight Watch's scheduler, API client and response parser.",
+    usageLevel: "working",
+    current: true,
+    usedFor: ["Desktop backends", "Parsing"],
+    match: ["Rust"],
+  },
+  {
     id: "java",
     name: "Java",
     category: "Languages",
@@ -145,6 +157,18 @@ export const skills: Skill[] = [
     current: true,
     usedFor: ["UI", "Dashboards", "Interactive apps"],
     match: ["React"],
+  },
+  {
+    id: "svelte",
+    name: "Svelte",
+    category: "Frontend",
+    brandColor: "#FF3E00",
+    description:
+      "The interface of CAESAR Course Check, built with Vite and served inside a native shell.",
+    usageLevel: "working",
+    current: true,
+    usedFor: ["UI", "Desktop app interfaces"],
+    match: ["Svelte"],
   },
   {
     id: "nextjs",
@@ -306,6 +330,18 @@ export const skills: Skill[] = [
     match: ["Matplotlib"],
   },
   {
+    id: "tauri",
+    name: "Tauri",
+    category: "Data & Desktop",
+    brandColor: "#24C8D8",
+    description:
+      "The desktop shell for Flight Watch and Teyvat Lexicon: a Rust core with a web UI, as a menu-bar or tray app.",
+    usageLevel: "working",
+    current: true,
+    usedFor: ["Desktop apps", "Menu-bar apps"],
+    match: ["Tauri"],
+  },
+  {
     id: "pyqt",
     name: "PyQt6",
     category: "Data & Desktop",
@@ -331,6 +367,18 @@ export const skills: Skill[] = [
   },
 
   // ---- Automation & Testing ----
+  {
+    id: "playwright",
+    name: "Playwright",
+    category: "Automation & Testing",
+    brandColor: "#2EAD33",
+    description:
+      "Headless-Chrome automation: it reads class enrollment for CAESAR Course Check.",
+    usageLevel: "working",
+    current: true,
+    usedFor: ["Browser automation", "Scraping"],
+    match: ["Playwright"],
+  },
   {
     id: "selenium",
     name: "Selenium",

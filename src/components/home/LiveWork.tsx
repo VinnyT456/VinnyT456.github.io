@@ -28,12 +28,13 @@ import PreviewShell from "./PreviewShell";
  */
 
 const ROTATE_MS = 12_000;
+// In the museum's own order (newest first), so the strip and the hall agree.
 const SET: { id: string; short: string }[] = [
+  { id: "CAESAR Course Check", short: "CAESAR" },
+  { id: "Teyvat Lexicon", short: "Teyvat" },
   { id: "Genshin Combat Optimizer", short: "Optimizer" },
-  { id: "CS Internship Bot", short: "Intern Bot" },
-  { id: "Exploding Kittens", short: "Kittens" },
   { id: "Genshin Lyre Autoplayer", short: "Lyre" },
-  { id: "This site", short: "This site" },
+  { id: "CS Internship Bot", short: "Intern Bot" },
 ];
 const ROTATION = SET.map((s) => ({ ...s, ex: exhibits.find((e) => e.id === s.id) })).filter(
   (s): s is { id: string; short: string; ex: Exhibit } => Boolean(s.ex)
